@@ -86,8 +86,10 @@ export const PACKAGES: Package[] = [
       {
         slug: "hidrosanitaria",
         title: "Instalación hidráulica y sanitaria",
-        description: "Gastos, diámetros, cisterna, tinaco y bomba.",
-        status: "proximamente",
+        description: "Demanda, cisterna, tinaco, diámetros, bomba y drenaje de una casa.",
+        status: "disponible",
+        href: "/civil/hidrosanitaria",
+        enValidacion: true,
       },
       {
         slug: "pozos",

@@ -1,6 +1,7 @@
 import type { SoilStudyInput, SoilStudyResult } from "@/calc/soils/study";
 import type { UnitSystem } from "@/calc/units";
 import type { EntradaBajada, ResultadoBajada } from "@/calc/cargas/bajada";
+import type { EntradaCasa, ResultadoCasa } from "@/calc/hidrosanitaria/casa";
 import type { EntradaColumna, ResultadoColumna } from "@/calc/concreto/columna";
 import type { EntradaLosa, ResultadoLosa } from "@/calc/concreto/losa";
 import type { EntradaViga, ResultadoViga } from "@/calc/concreto/viga";
@@ -8,6 +9,7 @@ import type { EntradaZapata, ResultadoZapata } from "@/calc/concreto/zapata";
 import type { FormularioCargas } from "@/lib/estudios/cargas";
 import type { ProjectInfo } from "@/lib/estudios/proyecto";
 import type { FormularioSuelos } from "@/lib/estudios/suelos";
+import type { FormularioHidrosanitaria } from "@/lib/estudios/hidrosanitaria";
 import type { FormularioColumna } from "@/lib/estudios/columna";
 import type { FormularioLosa } from "@/lib/estudios/losa";
 import type { FormularioViga } from "@/lib/estudios/viga";
@@ -45,7 +47,7 @@ export interface FirmaMemoria extends PerfilFirmante {
   huella: string;
 }
 
-export type Estudio = "suelos" | "cargas" | "zapata" | "viga" | "losa" | "columna";
+export type Estudio = "suelos" | "cargas" | "zapata" | "viga" | "losa" | "columna" | "hidrosanitaria";
 
 export interface DatosSuelos {
   formulario: FormularioSuelos;
@@ -90,8 +92,15 @@ export interface DatosColumna {
   resultado: ResultadoColumna;
 }
 
+export interface DatosHidrosanitaria {
+  formulario: FormularioHidrosanitaria;
+  proyecto: ProjectInfo;
+  entrada: EntradaCasa;
+  resultado: ResultadoCasa;
+}
+
 /** Datos de la memoria; su forma depende de `RegistroMemoria.estudio`. */
-export type DatosMemoria = DatosSuelos | DatosCargas | DatosZapata | DatosViga | DatosLosa | DatosColumna;
+export type DatosMemoria = DatosSuelos | DatosCargas | DatosZapata | DatosViga | DatosLosa | DatosColumna | DatosHidrosanitaria;
 
 export interface RegistroMemoria {
   folio: string;

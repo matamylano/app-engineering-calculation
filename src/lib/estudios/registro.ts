@@ -3,14 +3,16 @@
  * y su componente de memoria, y una entrada aquí.
  */
 import { bajadaDeCargas } from "@/calc/cargas/bajada";
+import { disenarCasa } from "@/calc/hidrosanitaria/casa";
 import { disenarColumna } from "@/calc/concreto/columna";
 import { disenarLosa } from "@/calc/concreto/losa";
 import { disenarViga, problemasViga } from "@/calc/concreto/viga";
 import { disenarZapata } from "@/calc/concreto/zapata";
 import { runSoilStudy } from "@/calc/soils/study";
-import type { DatosCargas, DatosColumna, DatosLosa, DatosMemoria, DatosSuelos, DatosViga, DatosZapata, Estudio } from "@/lib/servidor/tipos";
+import type { DatosCargas, DatosColumna, DatosHidrosanitaria, DatosLosa, DatosMemoria, DatosSuelos, DatosViga, DatosZapata, Estudio } from "@/lib/servidor/tipos";
 import { entradaCargas, leerFormularioCargas } from "./cargas";
 import { entradaDesdeFormulario, leerFormulario, unitsOf } from "./suelos";
+import { entradaHidrosanitaria, leerFormularioHidrosanitaria } from "./hidrosanitaria";
 import { entradaColumna, leerFormularioColumna } from "./columna";
 import { entradaLosa, leerFormularioLosa } from "./losa";
 import { entradaViga, leerFormularioViga } from "./viga";
@@ -35,6 +37,12 @@ export const ESTUDIOS: Record<Estudio, InfoEstudio> = {
   viga: { titulo: "Viga de concreto", prefijo: "VIG", ruta: "/civil/viga", enValidacion: true },
   losa: { titulo: "Losa maciza en una dirección", prefijo: "LOS", ruta: "/civil/losa", enValidacion: true },
   columna: { titulo: "Columna de concreto", prefijo: "COL", ruta: "/civil/columna", enValidacion: true },
+  hidrosanitaria: {
+    titulo: "Instalación hidráulica y sanitaria",
+    prefijo: "HID",
+    ruta: "/civil/hidrosanitaria",
+    enValidacion: true,
+  },
 };
 
 export const esEstudio = (x: unknown): x is Estudio => typeof x === "string" && x in ESTUDIOS;
@@ -119,6 +127,19 @@ function calcularColumna(raw: unknown): Calculo<DatosColumna> {
   }
 }
 
+function calcularHidrosanitaria(raw: unknown): Calculo<DatosHidrosanitaria> {
+  const formulario = leerFormularioHidrosanitaria(raw);
+  if (!formulario) return { ok: false, error: "Los datos del formulario no son válidos." };
+  const entrada = entradaHidrosanitaria(formulario);
+  try {
+    const resultado = disenarCasa(entrada);
+    if (!resultado.cumple) return { ok: false, error: `La instalación no pasa: ${resultado.problemas.join("; ")}.` };
+    return { ok: true, valor: { formulario, proyecto: formulario.project, entrada, resultado } };
+  } catch (e) {
+    return { ok: false, error: `Corrige los datos: ${errorDe(e)}` };
+  }
+}
+
 const CALCULOS: Record<Estudio, (raw: unknown) => Calculo<DatosMemoria>> = {
   suelos: calcularSuelos,
   cargas: calcularCargas,
@@ -126,6 +147,7 @@ const CALCULOS: Record<Estudio, (raw: unknown) => Calculo<DatosMemoria>> = {
   viga: calcularViga,
   losa: calcularLosa,
   columna: calcularColumna,
+  hidrosanitaria: calcularHidrosanitaria,
 };
 
 /** Valida y recalcula en el servidor el formulario de un estudio. */

@@ -12,13 +12,13 @@ export type Resultado<T = RegistroMemoria> = { ok: true; valor: T } | { ok: fals
 
 const falla = (error: string) => ({ ok: false as const, error });
 
-/** Folio con la fecha de México: PRE-AAAAMMDD-XXXXXX (SUE suelos, CAR cargas, ZAP zapata, VIG viga, LOS losa, COL columna…). */
+/** Folio con la fecha de México: PRE-AAAAMMDD-XXXXXX (SUE suelos, CAR cargas, ZAP zapata, VIG viga, LOS losa, COL columna, HID hidrosanitaria…). */
 export function nuevoFolio(fecha = new Date(), estudio: Estudio = "suelos") {
   const ymd = fecha.toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" }).replace(/-/g, "");
   return `${ESTUDIOS[estudio].prefijo}-${ymd}-${randomBytes(3).toString("hex").toUpperCase()}`;
 }
 
-export const FOLIO_VALIDO = /^(SUE|CAR|ZAP|VIG|LOS|COL)-\d{8}-[0-9A-F]{4,6}$/;
+export const FOLIO_VALIDO = /^(SUE|CAR|ZAP|VIG|LOS|COL|HID)-\d{8}-[0-9A-F]{4,6}$/;
 
 /** Recalcula en el servidor. Error si los datos no cierran. */
 export const calcular = (estudio: Estudio, formulario: unknown): Resultado<DatosMemoria> =>
