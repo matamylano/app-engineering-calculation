@@ -1,12 +1,14 @@
 import type { SoilStudyInput, SoilStudyResult } from "@/calc/soils/study";
 import type { UnitSystem } from "@/calc/units";
 import type { EntradaBajada, ResultadoBajada } from "@/calc/cargas/bajada";
+import type { EntradaColumna, ResultadoColumna } from "@/calc/concreto/columna";
 import type { EntradaLosa, ResultadoLosa } from "@/calc/concreto/losa";
 import type { EntradaViga, ResultadoViga } from "@/calc/concreto/viga";
 import type { EntradaZapata, ResultadoZapata } from "@/calc/concreto/zapata";
 import type { FormularioCargas } from "@/lib/estudios/cargas";
 import type { ProjectInfo } from "@/lib/estudios/proyecto";
 import type { FormularioSuelos } from "@/lib/estudios/suelos";
+import type { FormularioColumna } from "@/lib/estudios/columna";
 import type { FormularioLosa } from "@/lib/estudios/losa";
 import type { FormularioViga } from "@/lib/estudios/viga";
 import type { FormularioZapata } from "@/lib/estudios/zapata";
@@ -43,7 +45,7 @@ export interface FirmaMemoria extends PerfilFirmante {
   huella: string;
 }
 
-export type Estudio = "suelos" | "cargas" | "zapata" | "viga" | "losa";
+export type Estudio = "suelos" | "cargas" | "zapata" | "viga" | "losa" | "columna";
 
 export interface DatosSuelos {
   formulario: FormularioSuelos;
@@ -81,8 +83,15 @@ export interface DatosLosa {
   resultado: ResultadoLosa;
 }
 
+export interface DatosColumna {
+  formulario: FormularioColumna;
+  proyecto: ProjectInfo;
+  entrada: EntradaColumna;
+  resultado: ResultadoColumna;
+}
+
 /** Datos de la memoria; su forma depende de `RegistroMemoria.estudio`. */
-export type DatosMemoria = DatosSuelos | DatosCargas | DatosZapata | DatosViga | DatosLosa;
+export type DatosMemoria = DatosSuelos | DatosCargas | DatosZapata | DatosViga | DatosLosa | DatosColumna;
 
 export interface RegistroMemoria {
   folio: string;

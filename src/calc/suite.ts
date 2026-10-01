@@ -70,9 +70,17 @@ export const PACKAGES: Package[] = [
         enValidacion: true,
       },
       {
+        slug: "columna",
+        title: "Columna de concreto",
+        description: "Flexocompresión, esbeltez, acero longitudinal y estribos.",
+        status: "disponible",
+        href: "/civil/columna",
+        enValidacion: true,
+      },
+      {
         slug: "estructuras",
-        title: "Columna y losa en dos direcciones",
-        description: "Diseño de cada elemento con su armado.",
+        title: "Losa en dos direcciones",
+        description: "Losa maciza apoyada en sus cuatro bordes.",
         status: "proximamente",
       },
       {

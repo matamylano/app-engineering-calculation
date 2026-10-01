@@ -71,3 +71,21 @@ export function aceroPorFlexion(mu: number, b: number, d: number, fc: number, fy
   if (k < 0) return null;
   return ((f * b * d) / fy) * (1 - Math.sqrt(k));
 }
+
+/** Factor de resistencia en flexocompresión (columnas con estribos). */
+export const FR_COMPRESION = 0.65;
+
+/** Módulo de elasticidad del acero (kg/cm²) y deformación última del concreto. */
+export const ES = 2_000_000;
+export const EPSILON_CU = 0.003;
+
+/** Módulo de elasticidad del concreto clase 1 (kg/cm²): 14 000 √f'c. */
+export const moduloConcreto = (fc: number) => 14_000 * Math.sqrt(fc);
+
+/** Cuantías mínima y máxima del refuerzo longitudinal de columnas. */
+export const CUANTIA_MIN_COLUMNA = 0.01;
+export const CUANTIA_MAX_COLUMNA = 0.04;
+
+/** Separación máxima de estribos en columnas: menor de 850 db / √fy, 48 de y b / 2. */
+export const separacionEstribosColumna = (db: number, de: number, fy: number, b: number) =>
+  Math.min((850 * db) / Math.sqrt(fy), 48 * de, b / 2);
