@@ -3,11 +3,13 @@
  * y su componente de memoria, y una entrada aquí.
  */
 import { bajadaDeCargas } from "@/calc/cargas/bajada";
+import { disenarViga, problemasViga } from "@/calc/concreto/viga";
 import { disenarZapata } from "@/calc/concreto/zapata";
 import { runSoilStudy } from "@/calc/soils/study";
-import type { DatosCargas, DatosMemoria, DatosSuelos, DatosZapata, Estudio } from "@/lib/servidor/tipos";
+import type { DatosCargas, DatosMemoria, DatosSuelos, DatosViga, DatosZapata, Estudio } from "@/lib/servidor/tipos";
 import { entradaCargas, leerFormularioCargas } from "./cargas";
 import { entradaDesdeFormulario, leerFormulario, unitsOf } from "./suelos";
+import { entradaViga, leerFormularioViga } from "./viga";
 import { entradaZapata, leerFormularioZapata } from "./zapata";
 
 export type Calculo<D> = { ok: true; valor: D } | { ok: false; error: string };
@@ -26,6 +28,7 @@ export const ESTUDIOS: Record<Estudio, InfoEstudio> = {
   suelos: { titulo: "Estudio de mecánica de suelos", prefijo: "SUE", ruta: "/civil/suelos", enValidacion: true },
   cargas: { titulo: "Bajada de cargas", prefijo: "CAR", ruta: "/civil/cargas", enValidacion: true },
   zapata: { titulo: "Zapata aislada", prefijo: "ZAP", ruta: "/civil/zapata", enValidacion: true },
+  viga: { titulo: "Viga de concreto", prefijo: "VIG", ruta: "/civil/viga", enValidacion: true },
 };
 
 export const esEstudio = (x: unknown): x is Estudio => typeof x === "string" && x in ESTUDIOS;
@@ -71,10 +74,24 @@ function calcularZapata(raw: unknown): Calculo<DatosZapata> {
   }
 }
 
+function calcularViga(raw: unknown): Calculo<DatosViga> {
+  const formulario = leerFormularioViga(raw);
+  if (!formulario) return { ok: false, error: "Los datos del formulario no son válidos." };
+  const entrada = entradaViga(formulario);
+  try {
+    const resultado = disenarViga(entrada);
+    if (!resultado.cumple) return { ok: false, error: `La viga no pasa: ${problemasViga(resultado).join("; ")}.` };
+    return { ok: true, valor: { formulario, proyecto: formulario.project, entrada, resultado } };
+  } catch (e) {
+    return { ok: false, error: `Corrige los datos: ${errorDe(e)}` };
+  }
+}
+
 const CALCULOS: Record<Estudio, (raw: unknown) => Calculo<DatosMemoria>> = {
   suelos: calcularSuelos,
   cargas: calcularCargas,
   zapata: calcularZapata,
+  viga: calcularViga,
 };
 
 /** Valida y recalcula en el servidor el formulario de un estudio. */

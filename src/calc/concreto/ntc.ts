@@ -50,3 +50,24 @@ export const VARILLAS: Varilla[] = [
 ];
 
 export const varilla = (numero: number) => VARILLAS.find((v) => v.numero === numero);
+
+/** Factor del bloque de compresión: 0.85 hasta f'c = 280 y baja 0.05 por cada 70 kg/cm², sin bajar de 0.65. */
+export const beta1 = (fc: number) => Math.max(0.65, Math.min(0.85, 0.85 - (0.05 * (fc - 280)) / 70));
+
+/** Cuantía balanceada: ρb = (f''c / fy) · 6000 β1 / (fy + 6000). */
+export const cuantiaBalanceada = (fc: number, fy: number) => (fppc(fc) / fy) * ((6000 * beta1(fc)) / (fy + 6000));
+
+/** Cuantía máxima de tensión: 75 % de la balanceada (criterio para zona sísmica). */
+export const cuantiaMaxima = (fc: number, fy: number) => 0.75 * cuantiaBalanceada(fc, fy);
+
+/**
+ * Acero de tensión para un momento último (cm²), sección rectangular con
+ * refuerzo simple: As = (f''c b d / fy) (1 − √(1 − 2 Mu / (FR f''c b d²))).
+ * Mu en kg·cm, b y d en cm. Devuelve null si la sección no alcanza.
+ */
+export function aceroPorFlexion(mu: number, b: number, d: number, fc: number, fy: number): number | null {
+  const f = fppc(fc);
+  const k = 1 - (2 * mu) / (FR_FLEXION * f * b * d * d);
+  if (k < 0) return null;
+  return ((f * b * d) / fy) * (1 - Math.sqrt(k));
+}

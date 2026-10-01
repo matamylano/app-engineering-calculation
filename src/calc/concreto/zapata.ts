@@ -7,12 +7,11 @@
  * de la columna, y da el armado igual en las dos direcciones.
  */
 import {
+  aceroPorFlexion,
   aceroTemperatura,
   cortantePenetracion,
   cortanteVigaAncha,
   cuantiaMinima,
-  fppc,
-  FR_FLEXION,
   separacionMaxima,
   varilla,
 } from "./ntc";
@@ -128,10 +127,8 @@ export function disenarZapata(e: EntradaZapata): ResultadoZapata {
 
   // Flexión en la cara de la columna.
   const mu = (qu * B * volado * volado) / 2; // kg·cm
-  const fpc = fppc(e.fc);
-  const k = 1 - (2 * mu) / (FR_FLEXION * fpc * B * d * d);
-  if (k < 0) throw new RangeError("La sección no resiste el momento: aumenta el peralte.");
-  const aceroFlexion = ((fpc * B * d) / e.fy) * (1 - Math.sqrt(k));
+  const aceroFlexion = aceroPorFlexion(mu, B, d, e.fc, e.fy);
+  if (aceroFlexion === null) throw new RangeError("La sección no resiste el momento: aumenta el peralte.");
   const aceroMinimo = Math.max(cuantiaMinima(e.fc, e.fy) * B * d, aceroTemperatura(e.h, e.fy) * B);
   const aceroDiseno = Math.max(aceroFlexion, aceroMinimo);
 

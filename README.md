@@ -9,7 +9,8 @@ Suite web de estudios de ingeniería con memoria de cálculo lista para firma. H
 | Ingeniería civil | Mecánica de suelos: clasificación SUCS, capacidad de carga (Terzaghi, con nivel freático), asentamientos inmediatos y por consolidación | Disponible |
 | Ingeniería civil | Bajada de cargas: cargas por nivel (NTC Criterios y Acciones), carga por columna o muro y tamaño de zapata | Disponible |
 | Ingeniería civil | Zapata aislada (NTC Concreto): tamaño, penetración, cortante como viga ancha, flexión y armado | Disponible |
-| Ingeniería civil | Losa, viga y columna de concreto, instalación hidrosanitaria, pozos, drenaje | Próximamente |
+| Ingeniería civil | Viga de concreto: momentos y cortante por tipo de apoyo, acero arriba y abajo, estribos y peralte mínimo | Disponible |
+| Ingeniería civil | Losa y columna de concreto, instalación hidrosanitaria, pozos, drenaje | Próximamente |
 | Paquetes 2 y 3 | Por definir | Próximamente |
 
 Normas: NTC-CDMX 2023 (Cimentaciones, Criterios y Acciones, Concreto), ASTM D2487. Mientras el ingeniero responsable no valide las fórmulas de un estudio, `enValidacion` en `src/lib/estudios/registro.ts` y `src/calc/suite.ts` muestra el aviso «En validación». Unidades de obra (t/m², t/m³, kg/cm²) o SI; el motor calcula en SI.

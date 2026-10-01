@@ -54,8 +54,16 @@ export const PACKAGES: Package[] = [
         enValidacion: true,
       },
       {
+        slug: "viga",
+        title: "Viga de concreto",
+        description: "Flexión, cortante y estribos según el tipo de apoyo.",
+        status: "disponible",
+        href: "/civil/viga",
+        enValidacion: true,
+      },
+      {
         slug: "estructuras",
-        title: "Losa, viga y columna de concreto",
+        title: "Losa y columna de concreto",
         description: "Diseño de cada elemento con su armado.",
         status: "proximamente",
       },
