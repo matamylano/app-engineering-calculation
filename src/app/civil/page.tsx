@@ -20,7 +20,7 @@ export default function CivilPackage() {
       <ul className="mt-8 grid gap-4 sm:grid-cols-2">
         {civil.studies.map((s) => (
           <li key={s.slug}>
-            <CatalogCard title={s.title} description={s.description} status={s.status} href={s.href} />
+            <CatalogCard title={s.title} description={s.description} status={s.status} href={s.href} enValidacion={s.enValidacion} />
           </li>
         ))}
       </ul>

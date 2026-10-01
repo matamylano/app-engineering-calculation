@@ -8,6 +8,8 @@ export interface Study {
   description: string;
   status: Availability;
   href?: string;
+  /** Disponible, pero sus fórmulas aún las revisa el ingeniero responsable. */
+  enValidacion?: boolean;
 }
 
 export interface Package {
@@ -33,6 +35,7 @@ export const PACKAGES: Package[] = [
         description: "Clasificación SUCS, capacidad de carga y asentamientos.",
         status: "disponible",
         href: "/civil/suelos",
+        enValidacion: true,
       },
       {
         slug: "cargas",
@@ -40,11 +43,20 @@ export const PACKAGES: Package[] = [
         description: "Cargas por nivel, carga por columna o muro y tamaño de zapata.",
         status: "disponible",
         href: "/civil/cargas",
+        enValidacion: true,
+      },
+      {
+        slug: "zapata",
+        title: "Zapata aislada",
+        description: "Tamaño, peralte y armado con revisión de penetración, cortante y flexión.",
+        status: "disponible",
+        href: "/civil/zapata",
+        enValidacion: true,
       },
       {
         slug: "estructuras",
-        title: "Diseño de elementos de concreto",
-        description: "Losa, viga, columna y zapata con su armado.",
+        title: "Losa, viga y columna de concreto",
+        description: "Diseño de cada elemento con su armado.",
         status: "proximamente",
       },
       {

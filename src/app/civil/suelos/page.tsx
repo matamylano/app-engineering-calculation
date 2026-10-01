@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import AvisoValidacion from "@/components/AvisoValidacion";
 import { notFound } from "next/navigation";
 import { almacen } from "@/lib/servidor/config";
 import { FOLIO_VALIDO } from "@/lib/servidor/memorias";
@@ -34,6 +35,7 @@ export default async function Page({ searchParams }: PageProps<"/civil/suelos">)
           Captura los resultados de laboratorio y de campo. Los cálculos se actualizan al escribir; al final genera
           la memoria lista para firma.
         </p>
+        <AvisoValidacion estudio="suelos" />
       </div>
       <SoilStudy folio={editar?.folio} inicial={(editar?.inicial?.datos as DatosSuelos | undefined)?.formulario} creditos={creditos} />
     </main>

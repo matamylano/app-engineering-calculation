@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import AvisoValidacion from "@/components/AvisoValidacion";
 import { notFound } from "next/navigation";
 import { almacen } from "@/lib/servidor/config";
 import { FOLIO_VALIDO } from "@/lib/servidor/memorias";
@@ -35,6 +36,7 @@ export default async function Page({ searchParams }: PageProps<"/civil/cargas">)
         Carga muerta y viva por nivel y la carga que baja por cada columna o muro hasta la cimentación, según las NTC
         de Criterios y Acciones. Si ya tienes la capacidad del suelo, también da el tamaño de cada zapata.
       </p>
+      <AvisoValidacion estudio="cargas" />
       <BajadaCargas folio={editar?.folio} inicial={editar?.datos.formulario} creditos={creditos} />
     </main>
   );

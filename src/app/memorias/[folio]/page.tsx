@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { accionComprar, accionReenviar } from "@/app/acciones";
+import AvisoValidacion from "@/components/AvisoValidacion";
 import BotonImprimir from "@/components/BotonImprimir";
 import ContactoVentas from "@/components/ContactoVentas";
 import MemoriaDeRegistro from "@/components/MemoriaDeRegistro";
@@ -37,6 +38,7 @@ export default async function Page({ params, searchParams }: PageProps<"/memoria
           <h1 className="font-mono text-2xl font-semibold tracking-tight">{m.folio}</h1>
           <EstadoPill estado={m.estado} />
         </div>
+        {m.estado !== "aprobada" && <AvisoValidacion estudio={m.estudio} />}
         <Mensajes
           error={typeof error === "string" ? error : undefined}
           aviso={pago === "ok" ? "Pago recibido. Tu memoria ya está con el ingeniero para revisión." : pago === "cancelado" ? "Cancelaste el pago; no se cobró nada." : undefined}

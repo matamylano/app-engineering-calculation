@@ -8,16 +8,18 @@ Suite web de estudios de ingeniería con memoria de cálculo lista para firma. H
 | --- | --- | --- |
 | Ingeniería civil | Mecánica de suelos: clasificación SUCS, capacidad de carga (Terzaghi, con nivel freático), asentamientos inmediatos y por consolidación | Disponible |
 | Ingeniería civil | Bajada de cargas: cargas por nivel (NTC Criterios y Acciones), carga por columna o muro y tamaño de zapata | Disponible |
-| Ingeniería civil | Diseño de elementos de concreto, instalación hidrosanitaria, pozos, drenaje | Próximamente |
+| Ingeniería civil | Zapata aislada (NTC Concreto): tamaño, penetración, cortante como viga ancha, flexión y armado | Disponible |
+| Ingeniería civil | Losa, viga y columna de concreto, instalación hidrosanitaria, pozos, drenaje | Próximamente |
 | Paquetes 2 y 3 | Por definir | Próximamente |
 
-Normas: NTC-CDMX 2023 (Cimentaciones), ASTM D2487. Unidades de obra (t/m², t/m³, kg/cm²) o SI; el motor calcula en SI.
+Normas: NTC-CDMX 2023 (Cimentaciones, Criterios y Acciones, Concreto), ASTM D2487. Mientras el ingeniero responsable no valide las fórmulas de un estudio, `enValidacion` en `src/lib/estudios/registro.ts` y `src/calc/suite.ts` muestra el aviso «En validación». Unidades de obra (t/m², t/m³, kg/cm²) o SI; el motor calcula en SI.
 
 ## Estructura
 
 - `src/calc/`: motor de cálculo. Funciones puras, sin interfaz, cada una con pruebas (`*.test.ts`).
   - `soils/`: SUCS, Terzaghi, asentamientos y el estudio completo (`study.ts`).
   - `cargas/`: bajada de cargas (en kg/m² y t, como se usa en obra).
+  - `concreto/`: diseño de elementos de concreto reforzado; `ntc.ts` junta las constantes de las NTC de Concreto para que el ingeniero responsable las revise.
   - `units.ts`: conversión entre SI y unidades de obra.
   - `suite.ts`: catálogo de paquetes y estudios que muestra la página inicial.
 - `src/app/`: páginas. `/` (paquetes), `/civil` (estudios del paquete civil), `/civil/suelos` (estudio), `/entrar`, `/cuenta` (créditos y memorias), `/memorias/[folio]`, `/firma` (panel del ingeniero).

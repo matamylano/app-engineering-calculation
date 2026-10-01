@@ -7,10 +7,11 @@ interface Props {
   description: string;
   status: Availability;
   href?: string;
+  enValidacion?: boolean;
 }
 
 /** Tarjeta de paquete o estudio. Solo es enlace si está disponible. */
-export default function CatalogCard({ title, description, status, href }: Props) {
+export default function CatalogCard({ title, description, status, href, enValidacion }: Props) {
   const body = (
     <>
       <div className="flex items-start justify-between gap-3">
@@ -18,6 +19,9 @@ export default function CatalogCard({ title, description, status, href }: Props)
         <StatusPill status={status} />
       </div>
       <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{description}</p>
+      {enValidacion && status === "disponible" && (
+        <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-400">En validación por el ingeniero responsable</p>
+      )}
     </>
   );
   if (status === "disponible" && href) {
