@@ -1,27 +1,32 @@
-# Cálculos de ingeniería civil
+# Suite de Ingeniería
 
-App web con calculadoras de ingeniería civil. Hecha con Next.js y TypeScript, lista para desplegar en Vercel.
+Suite web de estudios de ingeniería con memoria de cálculo lista para firma. Hecha con Next.js y TypeScript, lista para desplegar en Vercel.
 
-## Módulos
+## Paquetes
 
-| Área | Módulo | Método |
+| Paquete | Estudio | Estado |
 | --- | --- | --- |
-| Cimentaciones | Capacidad de carga de suelos | Terzaghi (corrida, cuadrada, circular; falla general o local) |
+| Ingeniería civil | Mecánica de suelos: clasificación SUCS, capacidad de carga (Terzaghi, con nivel freático), asentamientos inmediatos y por consolidación | Disponible |
+| Ingeniería civil | Estructuras, instalación hidrosanitaria, pozos, drenaje | Próximamente |
+| Paquetes 2 y 3 | Por definir | Próximamente |
+
+Normas: NTC-CDMX 2023 (Cimentaciones), ASTM D2487. Unidades de obra (t/m², t/m³, kg/cm²) o SI; el motor calcula en SI.
 
 ## Estructura
 
-- `src/calc/`: motor de cálculo. Funciones puras, sin interfaz, cada una con sus pruebas (`*.test.ts`). Todo en unidades SI.
-- `src/calc/modules.ts`: catálogo de módulos que muestra la página de inicio.
-- `src/app/`: páginas. Cada módulo vive en `src/app/<área>/<módulo>/`.
-
-Para agregar un módulo: escribe la función y sus pruebas en `src/calc/<módulo>/`, crea la página en `src/app/` y regístrala en `src/calc/modules.ts`.
+- `src/calc/`: motor de cálculo. Funciones puras, sin interfaz, cada una con pruebas (`*.test.ts`).
+  - `soils/`: SUCS, Terzaghi, asentamientos y el estudio completo (`study.ts`).
+  - `units.ts`: conversión entre SI y unidades de obra.
+  - `suite.ts`: catálogo de paquetes y estudios que muestra la página inicial.
+- `src/app/`: páginas. `/` (paquetes), `/civil` (estudios del paquete civil), `/civil/suelos` (estudio y memoria).
+- `src/lib/credits.ts`: créditos de cálculo. **Provisional**: se guardan en el navegador (5 gratis) y no hay cobro.
 
 ## Desarrollo
 
 ```bash
 npm install
 npm run dev        # http://localhost:3000
-npm test           # pruebas del motor de cálculo
+npm test
 npm run lint
 npm run typecheck
 npm run build
@@ -29,4 +34,4 @@ npm run build
 
 ## Validación
 
-Los resultados deben compararse contra casos reales o ejemplos resueltos antes de usarse en proyectos. Nc y Nq coinciden con la tabla de Terzaghi; Nγ usa la aproximación de Coduto (2001), que da alrededor de 5 % más que la tabla de Kumbhojkar para φ entre 30° y 40°.
+Ningún estudio se publica hasta que el ingeniero responsable reproduzca sus casos de validación. Nc y Nq usan las expresiones cerradas de Terzaghi; Nγ se interpola en la tabla de Kumbhojkar (1993).

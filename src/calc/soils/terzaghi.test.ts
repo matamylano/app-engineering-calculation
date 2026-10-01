@@ -17,22 +17,19 @@ describe("terzaghiFactors", () => {
     expect(f.Nq).toBeCloseTo(Nq, 1);
   });
 
-  it("Nγ es cero para φ = 0 y crece con φ", () => {
-    expect(terzaghiFactors(0).Ngamma).toBe(0);
-    const values = [10, 20, 30, 40].map((p) => terzaghiFactors(p).Ngamma);
-    expect(values).toEqual([...values].sort((a, b) => a - b));
+  it.each([
+    [0, 0],
+    [20, 3.64],
+    [30, 19.13],
+    [35, 45.41],
+    [40, 115.31],
+    [50, 1072.8],
+  ])("φ = %i°: Nγ = %f (tabla de Kumbhojkar)", (phi, Ngamma) => {
+    expect(terzaghiFactors(phi).Ngamma).toBeCloseTo(Ngamma, 2);
   });
 
-  it("Nγ queda dentro de 6 % de la tabla de Kumbhojkar", () => {
-    for (const [phi, table] of [
-      [30, 19.13],
-      [35, 45.41],
-      [40, 115.31],
-    ]) {
-      const ratio = terzaghiFactors(phi).Ngamma / table;
-      expect(ratio).toBeGreaterThan(1);
-      expect(ratio).toBeLessThan(1.06);
-    }
+  it("interpola Nγ entre grados", () => {
+    expect(terzaghiFactors(30.5).Ngamma).toBeCloseTo((19.13 + 22.65) / 2, 3);
   });
 });
 
@@ -65,7 +62,7 @@ describe("terzaghiBearingCapacity", () => {
     expect(r.terms.cohesion).toBe(0);
     expect(r.terms.surcharge).toBeCloseTo(18 * f.Nq, 6);
     expect(r.terms.selfWeight).toBeCloseTo(0.4 * 18 * 2 * f.Ngamma, 6);
-    expect(r.ultimate).toBeCloseTo(693.87, 1);
+    expect(r.ultimate).toBeCloseTo(18 * f.Nq + 0.4 * 18 * 2 * 19.13, 6);
   });
 
   it("aplica los coeficientes de forma de Terzaghi", () => {
@@ -125,5 +122,53 @@ describe("terzaghiBearingCapacity", () => {
       ...override,
     };
     expect(() => terzaghiBearingCapacity(input)).toThrow(message);
+  });
+
+  describe("nivel freático", () => {
+    const base = {
+      cohesion: 0,
+      frictionAngle: 30,
+      unitWeight: 18,
+      depth: 1,
+      width: 2,
+      shape: "corrida" as const,
+    };
+    const buoyant = 20 - 9.81;
+
+    it("en la superficie usa el peso sumergido en q y en Nγ", () => {
+      const r = terzaghiBearingCapacity({
+        ...base,
+        waterTable: { depth: 0, saturatedUnitWeight: 20 },
+      });
+      expect(r.waterTableCase).toBe("sobre-desplante");
+      expect(r.surcharge).toBeCloseTo(buoyant * 1, 6);
+      expect(r.unitWeightBelow).toBeCloseTo(buoyant, 6);
+    });
+
+    it("entre Df y Df + B interpola el peso bajo la zapata", () => {
+      const r = terzaghiBearingCapacity({
+        ...base,
+        waterTable: { depth: 2, saturatedUnitWeight: 20 },
+      });
+      expect(r.waterTableCase).toBe("bajo-desplante");
+      expect(r.surcharge).toBeCloseTo(18, 6);
+      expect(r.unitWeightBelow).toBeCloseTo(buoyant + 0.5 * (18 - buoyant), 6);
+    });
+
+    it("a Df + B o más profundo no tiene efecto", () => {
+      const dry = terzaghiBearingCapacity(base);
+      const r = terzaghiBearingCapacity({
+        ...base,
+        waterTable: { depth: 3, saturatedUnitWeight: 20 },
+      });
+      expect(r.waterTableCase).toBe("sin-efecto");
+      expect(r.ultimate).toBeCloseTo(dry.ultimate, 6);
+    });
+
+    it("rechaza un peso saturado menor que el del agua", () => {
+      expect(() =>
+        terzaghiBearingCapacity({ ...base, waterTable: { depth: 1, saturatedUnitWeight: 9 } }),
+      ).toThrow(/saturado/);
+    });
   });
 });

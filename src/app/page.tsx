@@ -1,24 +1,18 @@
-import Link from "next/link";
-import { CALC_MODULES } from "@/calc/modules";
+import { PACKAGES } from "@/calc/suite";
+import CatalogCard from "@/components/CatalogCard";
 
 export default function Home() {
   return (
-    <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-12">
-      <h1 className="text-3xl font-semibold tracking-tight">Cálculos de ingeniería civil</h1>
-      <p className="mt-2 text-zinc-600 dark:text-zinc-400">
-        Elige un módulo para empezar. Todos los cálculos usan unidades SI.
+    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-12">
+      <h1 className="text-3xl font-semibold tracking-tight">Escoge un paquete</h1>
+      <p className="mt-2 max-w-2xl text-zinc-600 dark:text-zinc-400">
+        Cada paquete reúne los estudios de una especialidad. Los resultados salen en una memoria de cálculo
+        lista para que la firme un ingeniero responsable.
       </p>
-      <ul className="mt-8 grid gap-4">
-        {CALC_MODULES.map((m) => (
-          <li key={m.slug}>
-            <Link
-              href={m.href}
-              className="block rounded-lg border border-zinc-200 p-5 transition hover:border-zinc-400 dark:border-zinc-800 dark:hover:border-zinc-600"
-            >
-              <span className="text-xs font-medium uppercase tracking-wide text-zinc-500">{m.area}</span>
-              <h2 className="mt-1 text-lg font-semibold">{m.title}</h2>
-              <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{m.description}</p>
-            </Link>
+      <ul className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {PACKAGES.map((p) => (
+          <li key={p.slug}>
+            <CatalogCard title={p.title} description={p.description} status={p.status} href={p.href} />
           </li>
         ))}
       </ul>
