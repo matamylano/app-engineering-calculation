@@ -39,7 +39,7 @@ describe("perfil del firmante", () => {
     const alm = new AlmacenDemo();
     const cliente = { id: "c-1", email: "c@obra.mx" };
     await alm.asegurarUsuario(cliente);
-    const g = await generarMemoria(alm, cliente, FORMULARIO_INICIAL);
+    const g = await generarMemoria(alm, cliente, "suelos", FORMULARIO_INICIAL);
     if (!g.ok) throw new Error(g.error);
     await marcarFirmaPagada(alm, g.valor.folio);
     await guardarPerfil(alm, ing, { ...datos, firma: PNG, sello: JPG });

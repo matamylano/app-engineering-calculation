@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { almacen } from "@/lib/servidor/config";
 import { FOLIO_VALIDO } from "@/lib/servidor/memorias";
 import { sesionActual } from "@/lib/servidor/sesion";
+import type { DatosSuelos } from "@/lib/servidor/tipos";
 import SoilStudy from "./SoilStudy";
 
 export const metadata: Metadata = { title: "Estudio de mecánica de suelos" };
@@ -18,7 +19,7 @@ export default async function Page({ searchParams }: PageProps<"/civil/suelos">)
   let editar: { folio: string; inicial: Awaited<ReturnType<typeof alm.memoria>> } | undefined;
   if (typeof folio === "string") {
     const m = sesion && FOLIO_VALIDO.test(folio) ? await alm.memoria(folio) : null;
-    if (!m || m.usuarioId !== sesion?.id || m.estado === "aprobada" || m.estado === "en_revision") notFound();
+    if (!m || m.estudio !== "suelos" || m.usuarioId !== sesion?.id || m.estado === "aprobada" || m.estado === "en_revision") notFound();
     editar = { folio, inicial: m };
   }
 
@@ -34,7 +35,7 @@ export default async function Page({ searchParams }: PageProps<"/civil/suelos">)
           la memoria lista para firma.
         </p>
       </div>
-      <SoilStudy folio={editar?.folio} inicial={editar?.inicial?.datos.formulario} creditos={creditos} />
+      <SoilStudy folio={editar?.folio} inicial={(editar?.inicial?.datos as DatosSuelos | undefined)?.formulario} creditos={creditos} />
     </main>
   );
 }

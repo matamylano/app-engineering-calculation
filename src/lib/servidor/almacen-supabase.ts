@@ -5,7 +5,7 @@ import type { Almacen, EstadoMemoria, Pago, PerfilFirmante, RegistroMemoria, Usu
 interface FilaMemoria {
   folio: string;
   usuario_id: string;
-  estudio: "suelos";
+  estudio: RegistroMemoria["estudio"];
   estado: EstadoMemoria;
   version: number;
   creada_en: string;

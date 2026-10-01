@@ -35,9 +35,16 @@ export const PACKAGES: Package[] = [
         href: "/civil/suelos",
       },
       {
+        slug: "cargas",
+        title: "Bajada de cargas",
+        description: "Cargas por nivel, carga por columna o muro y tamaño de zapata.",
+        status: "disponible",
+        href: "/civil/cargas",
+      },
+      {
         slug: "estructuras",
-        title: "Cálculo estructural de casa habitación",
-        description: "Bajada de cargas, losa, viga, columna y zapata.",
+        title: "Diseño de elementos de concreto",
+        description: "Losa, viga, columna y zapata con su armado.",
         status: "proximamente",
       },
       {

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { EstadoPill, fechaCorta, Mensajes } from "@/components/ui";
+import { ESTUDIOS } from "@/lib/estudios/registro";
 import { almacen } from "@/lib/servidor/config";
 import { sesionActual } from "@/lib/servidor/sesion";
 
@@ -64,7 +65,8 @@ export default async function Page({ searchParams }: PageProps<"/firma">) {
                   <span className="grid">
                     <span className="font-mono text-sm font-medium">{m.folio}</span>
                     <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                      {m.datos.proyecto.obra || "Sin nombre de obra"} · {m.datos.proyecto.ubicacion || "sin ubicación"} ·
+                      {ESTUDIOS[m.estudio].titulo} · {m.datos.proyecto.obra || "Sin nombre de obra"} ·{" "}
+                      {m.datos.proyecto.ubicacion || "sin ubicación"} ·
                       esperando desde {fechaCorta(m.actualizadaEn)}
                     </span>
                   </span>

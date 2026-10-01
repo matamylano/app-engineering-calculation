@@ -1,4 +1,5 @@
-import { FIRMA_SUELOS_CENTAVOS, MONEDA, paquete, pesos } from "@/lib/pagos/catalogo";
+import { FIRMA_CENTAVOS, MONEDA, paquete, pesos } from "@/lib/pagos/catalogo";
+import { estudioDeFolio } from "@/lib/estudios/registro";
 import { crearCheckout, type SesionCheckout } from "@/lib/pagos/stripe";
 import { modoDemo, stripeConfigurado, urlApp, type Entorno } from "./config";
 import { FOLIO_VALIDO, marcarFirmaPagada, type Resultado } from "./memorias";
@@ -31,7 +32,7 @@ export async function iniciarCompra(
     if (m.estado !== "borrador") return { ok: false, error: "Esta memoria no se puede mandar a firma." };
     datos = {
       descripcion: `Revisión y firma de la memoria ${m.folio}`,
-      centavos: FIRMA_SUELOS_CENTAVOS,
+      centavos: FIRMA_CENTAVOS[m.estudio],
       folio: m.folio,
       regreso: `/memorias/${m.folio}`,
     };
@@ -106,5 +107,8 @@ export function descripcionCompra(c: Compra) {
     const p = paquete(c.paquete);
     return p ? { texto: `${p.creditos} créditos de cálculo`, precio: pesos(p.centavos), centavos: p.centavos } : null;
   }
-  return { texto: `Revisión y firma de la memoria ${c.folio}`, precio: pesos(FIRMA_SUELOS_CENTAVOS), centavos: FIRMA_SUELOS_CENTAVOS };
+  const estudio = estudioDeFolio(c.folio);
+  if (!estudio) return null;
+  const centavos = FIRMA_CENTAVOS[estudio];
+  return { texto: `Revisión y firma de la memoria ${c.folio}`, precio: pesos(centavos), centavos };
 }

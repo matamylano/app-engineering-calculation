@@ -8,14 +8,10 @@ import type { SoilStudyInput } from "@/calc/soils/study";
 import { toKNm3, toKPa, UNIT_SYSTEMS, type UnitSystem } from "@/calc/units";
 import { num, optNum } from "@/components/form";
 
-export interface ProjectInfo {
-  obra: string;
-  ubicacion: string;
-  cliente: string;
-  responsable: string;
-  cedula: string;
-  registro: string;
-}
+import { EMPTY_PROJECT, leerProyecto, type ProjectInfo } from "./proyecto";
+
+export type { ProjectInfo } from "./proyecto";
+export { EMPTY_PROJECT } from "./proyecto";
 
 export const VALUE_KEYS = [
   "p200", "p4", "ll", "pl", "cu", "cc",
@@ -25,7 +21,6 @@ export const VALUE_KEYS = [
 export type ValueKey = (typeof VALUE_KEYS)[number];
 export type Values = Record<ValueKey, string>;
 
-const PROJECT_KEYS = ["obra", "ubicacion", "cliente", "responsable", "cedula", "registro"] as const;
 
 export interface FormularioSuelos {
   unitsId: string;
@@ -47,9 +42,6 @@ export const DEFAULT_VALUES: Values = {
   pressure: "", es: "1500", nu: "0.3", z: "", h: "", s0: "", e0: "", ccomp: "", cs: "", pc: "",
 };
 
-export const EMPTY_PROJECT: ProjectInfo = {
-  obra: "", ubicacion: "", cliente: "", responsable: "", cedula: "", registro: "",
-};
 
 export const FORMULARIO_INICIAL: FormularioSuelos = {
   unitsId: UNIT_SYSTEMS[0].id,
@@ -127,20 +119,14 @@ export function leerFormulario(raw: unknown): FormularioSuelos | null {
   const bool = (x: unknown) => (typeof x === "boolean" ? x : null);
 
   const rv = r.values as Record<string, unknown> | undefined;
-  const rp = r.project as Record<string, unknown> | undefined;
-  if (typeof rv !== "object" || rv === null || typeof rp !== "object" || rp === null) return null;
+  const project = leerProyecto(r.project);
+  if (typeof rv !== "object" || rv === null || !project) return null;
 
   const values = {} as Values;
   for (const k of VALUE_KEYS) {
     const t = texto(rv[k] ?? "");
     if (t === null) return null;
     values[k] = t;
-  }
-  const project = {} as ProjectInfo;
-  for (const k of PROJECT_KEYS) {
-    const t = texto(rp[k] ?? "");
-    if (t === null) return null;
-    project[k] = t;
   }
 
   const unitsId = texto(r.unitsId);

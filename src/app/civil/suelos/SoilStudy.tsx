@@ -1,8 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import type { FailureMode, FootingShape } from "@/calc/soils/terzaghi";
 import { runSoilStudy, type SoilStudyResult } from "@/calc/soils/study";
 import { fromKPa, UNIT_SYSTEMS } from "@/calc/units";
@@ -15,7 +14,7 @@ import {
   type ProjectInfo,
   type ValueKey,
 } from "@/lib/estudios/suelos";
-import { accionGuardarMemoria } from "@/app/acciones";
+import { useGuardarMemoria } from "@/components/useGuardarMemoria";
 
 const SHAPES: { value: FootingShape; label: string }[] = [
   { value: "cuadrada", label: "Zapata cuadrada" },
@@ -28,9 +27,6 @@ const FAILURE: { value: FailureMode; label: string }[] = [
   { value: "local", label: "Corte local (suelo suelto o blando)" },
 ];
 
-/** Borrador del formulario mientras el usuario entra con su correo. */
-const BORRADOR = "suelos-borrador";
-
 interface Props {
   /** Memoria que se está corrigiendo (no gasta otro crédito). */
   folio?: string;
@@ -40,24 +36,11 @@ interface Props {
 }
 
 export default function SoilStudy({ folio, inicial, creditos }: Props) {
-  const router = useRouter();
   const [f, setF] = useState<FormularioSuelos>(inicial ?? FORMULARIO_INICIAL);
   const [notice, setNotice] = useState<string | null>(null);
-  const [pending, startTransition] = useTransition();
-
-  // Si el usuario tuvo que entrar con su correo, recupera lo que había capturado.
-  useEffect(() => {
-    if (folio) return;
-    try {
-      const raw = window.sessionStorage.getItem(BORRADOR);
-      if (!raw) return;
-      window.sessionStorage.removeItem(BORRADOR);
-      // eslint-disable-next-line react-hooks/set-state-in-effect -- se lee una sola vez al montar
-      setF({ ...FORMULARIO_INICIAL, ...(JSON.parse(raw) as FormularioSuelos) });
-    } catch {
-      // Sin almacenamiento: se queda con los valores de ejemplo.
-    }
-  }, [folio]);
+  const { guardar, pendiente: pending, error } = useGuardarMemoria<FormularioSuelos>("suelos", folio, (b) =>
+    setF({ ...FORMULARIO_INICIAL, ...b }),
+  );
 
   const v = f.values;
   const set = (key: ValueKey) => (value: string) => setF((p) => ({ ...p, values: { ...p.values, [key]: value } }));
@@ -83,23 +66,7 @@ export default function SoilStudy({ folio, inicial, creditos }: Props) {
       setNotice("Corrige los datos marcados en rojo antes de generar la memoria.");
       return;
     }
-    startTransition(async () => {
-      const r = await accionGuardarMemoria(f, folio);
-      if (r.ok) {
-        router.push(`/memorias/${r.folio}`);
-        return;
-      }
-      if (r.entrar) {
-        try {
-          window.sessionStorage.setItem(BORRADOR, JSON.stringify(f));
-        } catch {
-          // Sin almacenamiento: al volver se pierden los datos capturados.
-        }
-        router.push(`/entrar?siguiente=${encodeURIComponent("/civil/suelos")}`);
-        return;
-      }
-      setNotice(r.error);
-    });
+    guardar(f);
   };
 
   return (
@@ -242,7 +209,7 @@ export default function SoilStudy({ folio, inicial, creditos }: Props) {
                 : `Te ${creditos === 1 ? "queda" : "quedan"} ${creditos} ${creditos === 1 ? "crédito" : "créditos"}.`}
           </span>
         </div>
-        {notice && <ErrorText>{notice}</ErrorText>}
+        {(notice ?? error) && <ErrorText>{notice ?? error}</ErrorText>}
         {sinCreditos && (
           <p className="text-sm">
             Ya no tienes créditos.{" "}

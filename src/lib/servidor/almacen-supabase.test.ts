@@ -4,7 +4,7 @@ import { AlmacenSupabase, aFila, deFila } from "./almacen-supabase";
 import { calcular } from "./memorias";
 import type { RegistroMemoria } from "./tipos";
 
-const datos = calcular(FORMULARIO_INICIAL);
+const datos = calcular("suelos", FORMULARIO_INICIAL);
 if (!datos.ok) throw new Error(datos.error);
 const m: RegistroMemoria = {
   folio: "SUE-20261001-ABC123",

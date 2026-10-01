@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { leerFormulario } from "@/lib/estudios/suelos";
+import { esEstudio } from "@/lib/estudios/registro";
 import { pedirCodigo, verificarCodigo } from "@/lib/servidor/acceso";
 import { avisarMemoriaPorRevisar, avisarResultadoRevision } from "@/lib/servidor/avisos";
 import { almacen, modoDemo, stripeConfigurado } from "@/lib/servidor/config";
@@ -17,6 +17,7 @@ import {
 import { guardarPerfil } from "@/lib/servidor/firmante";
 import { aplicarPago, iniciarCompra, type Compra } from "@/lib/servidor/pagos";
 import { abrirSesion, cerrarSesion, sesionActual } from "@/lib/servidor/sesion";
+import type { Estudio } from "@/lib/servidor/tipos";
 
 /**
  * Server Actions de la suite. Cada una revisa la sesión por su cuenta: se
@@ -75,16 +76,19 @@ export async function accionSalir() {
 
 export type RespuestaMemoria = { ok: true; folio: string } | { ok: false; error: string; entrar?: boolean };
 
-/** Genera (1 crédito) o corrige (gratis) la memoria del estudio de suelos. */
-export async function accionGuardarMemoria(formularioCrudo: unknown, folio?: string): Promise<RespuestaMemoria> {
+/** Genera (1 crédito) o corrige (gratis) la memoria de un estudio. */
+export async function accionGuardarMemoria(
+  estudio: Estudio,
+  formulario: unknown,
+  folio?: string,
+): Promise<RespuestaMemoria> {
   const sesion = await sesionActual();
   if (!sesion) return { ok: false, entrar: true, error: "Entra con tu correo para generar la memoria." };
-  const formulario = leerFormulario(formularioCrudo);
-  if (!formulario) return { ok: false, error: "Los datos del formulario no son válidos." };
+  if (!esEstudio(estudio)) return { ok: false, error: "Estudio desconocido." };
   const alm = almacen();
   const r = folio
     ? await actualizarMemoria(alm, sesion, folio, formulario)
-    : await generarMemoria(alm, sesion, formulario);
+    : await generarMemoria(alm, sesion, estudio, formulario);
   if (!r.ok) return r;
   revalidatePath("/", "layout");
   return { ok: true, folio: r.valor.folio };

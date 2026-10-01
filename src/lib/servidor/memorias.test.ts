@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import { FORMULARIO_INICIAL, type FormularioSuelos } from "@/lib/estudios/suelos";
 import { FREE_CREDITS } from "@/lib/creditos";
 import { AlmacenDemo } from "./almacen-demo";
+import type { DatosSuelos } from "./tipos";
 import {
   actualizarMemoria,
   aprobarMemoria,
@@ -38,40 +39,41 @@ describe("memorias", () => {
 
   it("generar gasta un crédito y recalcula en el servidor", async () => {
     const alm = await preparar();
-    const r = await generarMemoria(alm, cliente, FORMULARIO_INICIAL);
+    const r = await generarMemoria(alm, cliente, "suelos", FORMULARIO_INICIAL);
     if (!r.ok) throw new Error(r.error);
     expect(r.valor.folio).toMatch(FOLIO_VALIDO);
     expect(r.valor.estado).toBe("borrador");
     expect(await alm.saldo(cliente.id)).toBe(FREE_CREDITS - 1);
-    const qa = r.valor.datos.resultado.bearing.ok ? r.valor.datos.resultado.bearing.value.allowable : 0;
+    const { resultado } = r.valor.datos as DatosSuelos;
+    const qa = resultado.bearing.ok ? resultado.bearing.value.allowable : 0;
     // 45.15 t/m² del ejemplo verificado a mano.
     expect(qa / 9.80665).toBeCloseTo(45.15, 1);
   });
 
   it("no genera con datos que no cierran ni sin créditos", async () => {
     const alm = await preparar();
-    expect((await generarMemoria(alm, cliente, conB("0"))).ok).toBe(false);
+    expect((await generarMemoria(alm, cliente, "suelos", conB("0"))).ok).toBe(false);
     expect(await alm.saldo(cliente.id)).toBe(FREE_CREDITS);
-    for (let i = 0; i < FREE_CREDITS; i++) expect((await generarMemoria(alm, cliente, FORMULARIO_INICIAL)).ok).toBe(true);
-    const r = await generarMemoria(alm, cliente, FORMULARIO_INICIAL);
+    for (let i = 0; i < FREE_CREDITS; i++) expect((await generarMemoria(alm, cliente, "suelos", FORMULARIO_INICIAL)).ok).toBe(true);
+    const r = await generarMemoria(alm, cliente, "suelos", FORMULARIO_INICIAL);
     expect(r).toEqual({ ok: false, error: expect.stringContaining("Ya no tienes créditos") });
   });
 
   it("corregir no gasta crédito y solo lo puede hacer el dueño", async () => {
     const alm = await preparar();
-    const r = await generarMemoria(alm, cliente, FORMULARIO_INICIAL);
+    const r = await generarMemoria(alm, cliente, "suelos", FORMULARIO_INICIAL);
     if (!r.ok) throw new Error(r.error);
     const c = await actualizarMemoria(alm, cliente, r.valor.folio, conB("2"));
     if (!c.ok) throw new Error(c.error);
     expect(c.valor.version).toBe(2);
-    expect(c.valor.datos.entrada.bearing.width).toBe(2);
+    expect((c.valor.datos as DatosSuelos).entrada.bearing.width).toBe(2);
     expect(await alm.saldo(cliente.id)).toBe(FREE_CREDITS - 1);
     expect((await actualizarMemoria(alm, otro, r.valor.folio, conB("3"))).ok).toBe(false);
   });
 
   it("flujo de firma: pago → revisión → cambios → reenvío → aprobación congelada", async () => {
     const alm = await preparar();
-    const g = await generarMemoria(alm, cliente, FORMULARIO_INICIAL);
+    const g = await generarMemoria(alm, cliente, "suelos", FORMULARIO_INICIAL);
     if (!g.ok) throw new Error(g.error);
     const folio = g.valor.folio;
 
@@ -117,7 +119,7 @@ describe("memorias", () => {
 
   it("no pisa cambios simultáneos", async () => {
     const alm = await preparar();
-    const g = await generarMemoria(alm, cliente, FORMULARIO_INICIAL);
+    const g = await generarMemoria(alm, cliente, "suelos", FORMULARIO_INICIAL);
     if (!g.ok) throw new Error(g.error);
     expect(await alm.guardarMemoria({ ...g.valor, version: 2 }, 1)).toBe(true);
     expect(await alm.guardarMemoria({ ...g.valor, version: 2 }, 1)).toBe(false);
@@ -132,5 +134,18 @@ describe("nuevoFolio", () => {
   it("usa la fecha de México", () => {
     // 1 de octubre 03:00 UTC = 30 de septiembre en la CDMX.
     expect(nuevoFolio(new Date("2026-10-01T03:00:00Z"))).toMatch(/^SUE-20260930-[0-9A-F]{6}$/);
+  });
+});
+
+describe("memoria de bajada de cargas", () => {
+  it("usa folio CAR y el precio de su firma", async () => {
+    const { FORMULARIO_CARGAS_INICIAL } = await import("@/lib/estudios/cargas");
+    const alm = await preparar();
+    const r = await generarMemoria(alm, cliente, "cargas", FORMULARIO_CARGAS_INICIAL);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.valor.folio).toMatch(/^CAR-\d{8}-[0-9A-F]{6}$/);
+    expect(r.valor.folio).toMatch(FOLIO_VALIDO);
+    // Corregir con un formulario de otro estudio no pasa.
+    expect((await actualizarMemoria(alm, cliente, r.valor.folio, FORMULARIO_INICIAL)).ok).toBe(false);
   });
 });

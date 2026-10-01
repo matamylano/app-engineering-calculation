@@ -1,8 +1,7 @@
 import { createHash, randomBytes } from "node:crypto";
-import { runSoilStudy } from "@/calc/soils/study";
-import { entradaDesdeFormulario, unitsOf, type FormularioSuelos } from "@/lib/estudios/suelos";
+import { calcularEstudio, ESTUDIOS } from "@/lib/estudios/registro";
 import { normalizarTelefono } from "@/lib/ventas/agentsales";
-import type { Almacen, DatosFirmante, DatosMemoria, FirmaMemoria, RegistroMemoria, Usuario } from "./tipos";
+import type { Almacen, DatosFirmante, DatosMemoria, Estudio, FirmaMemoria, RegistroMemoria, Usuario } from "./tipos";
 
 /**
  * Reglas de las memorias: generar (gasta un crédito), corregir, mandar a
@@ -13,39 +12,32 @@ export type Resultado<T = RegistroMemoria> = { ok: true; valor: T } | { ok: fals
 
 const falla = (error: string) => ({ ok: false as const, error });
 
-/** Folio con la fecha de México: SUE-AAAAMMDD-XXXXXX. */
-export function nuevoFolio(fecha = new Date()) {
+/** Folio con la fecha de México: PRE-AAAAMMDD-XXXXXX (SUE suelos, CAR cargas…). */
+export function nuevoFolio(fecha = new Date(), estudio: Estudio = "suelos") {
   const ymd = fecha.toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" }).replace(/-/g, "");
-  return `SUE-${ymd}-${randomBytes(3).toString("hex").toUpperCase()}`;
+  return `${ESTUDIOS[estudio].prefijo}-${ymd}-${randomBytes(3).toString("hex").toUpperCase()}`;
 }
 
-export const FOLIO_VALIDO = /^SUE-\d{8}-[0-9A-F]{4,6}$/;
+export const FOLIO_VALIDO = /^(SUE|CAR)-\d{8}-[0-9A-F]{4,6}$/;
 
-/** Recalcula en el servidor. Error si alguna parte del estudio no cierra. */
-export function calcular(formulario: FormularioSuelos): Resultado<DatosMemoria> {
-  const entrada = entradaDesdeFormulario(formulario);
-  const resultado = runSoilStudy(entrada);
-  const errores = [resultado.sucs, resultado.bearing, resultado.settlement].flatMap((r) => (r.ok ? [] : [r.error]));
-  if (errores.length) return falla(`Corrige los datos del estudio: ${errores[0]}`);
-  return {
-    ok: true,
-    valor: { formulario, proyecto: formulario.project, unidades: unitsOf(formulario), entrada, resultado },
-  };
-}
+/** Recalcula en el servidor. Error si los datos no cierran. */
+export const calcular = (estudio: Estudio, formulario: unknown): Resultado<DatosMemoria> =>
+  calcularEstudio(estudio, formulario);
 
 export async function generarMemoria(
   alm: Almacen,
   usuario: Usuario,
-  formulario: FormularioSuelos,
+  estudio: Estudio,
+  formulario: unknown,
   ahora = new Date(),
 ): Promise<Resultado> {
-  const datos = calcular(formulario);
+  const datos = calcular(estudio, formulario);
   if (!datos.ok) return datos;
   const fecha = ahora.toISOString();
   const memoria: RegistroMemoria = {
-    folio: nuevoFolio(ahora),
+    folio: nuevoFolio(ahora, estudio),
     usuarioId: usuario.id,
-    estudio: "suelos",
+    estudio,
     estado: "borrador",
     version: 1,
     creadaEn: fecha,
@@ -75,14 +67,14 @@ export async function actualizarMemoria(
   alm: Almacen,
   usuario: Usuario,
   folio: string,
-  formulario: FormularioSuelos,
+  formulario: unknown,
   ahora = new Date(),
 ): Promise<Resultado> {
   const m = await propia(alm, usuario, folio);
   if (!m.ok) return m;
   if (m.valor.estado === "en_revision") return falla("La memoria está en revisión; espera la respuesta del ingeniero.");
   if (m.valor.estado === "aprobada") return falla("La memoria ya está firmada y no se puede cambiar.");
-  const datos = calcular(formulario);
+  const datos = calcular(m.valor.estudio, formulario);
   if (!datos.ok) return datos;
   return guardar(alm, m.valor, { datos: datos.valor }, ahora);
 }

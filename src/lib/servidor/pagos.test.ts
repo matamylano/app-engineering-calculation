@@ -19,7 +19,7 @@ const stripeEnv = {
 async function preparar() {
   const alm = new AlmacenDemo();
   await alm.asegurarUsuario(u);
-  const g = await generarMemoria(alm, u, FORMULARIO_INICIAL);
+  const g = await generarMemoria(alm, u, "suelos", FORMULARIO_INICIAL);
   if (!g.ok) throw new Error(g.error);
   return { alm, folio: g.valor.folio };
 }

@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { accionComprar, accionReenviar } from "@/app/acciones";
-import Memoria, { snapshotDe } from "@/app/civil/suelos/Memoria";
 import BotonImprimir from "@/components/BotonImprimir";
 import ContactoVentas from "@/components/ContactoVentas";
+import MemoriaDeRegistro from "@/components/MemoriaDeRegistro";
 import { Boton, botonSecundario, EstadoPill, Mensajes } from "@/components/ui";
-import { FIRMA_SUELOS_CENTAVOS, pesos } from "@/lib/pagos/catalogo";
+import { FIRMA_CENTAVOS, pesos } from "@/lib/pagos/catalogo";
+import { ESTUDIOS } from "@/lib/estudios/registro";
 import { almacen } from "@/lib/servidor/config";
 import { FOLIO_VALIDO } from "@/lib/servidor/memorias";
 import { sesionActual } from "@/lib/servidor/sesion";
@@ -45,7 +46,7 @@ export default async function Page({ params, searchParams }: PageProps<"/memoria
           <>
             <div className="flex flex-wrap items-center gap-3">
               <BotonImprimir />
-              <Link href={`/civil/suelos?folio=${m.folio}`} className={botonSecundario}>
+              <Link href={`${ESTUDIOS[m.estudio].ruta}?folio=${m.folio}`} className={botonSecundario}>
                 Corregir datos
               </Link>
               <span className="text-sm text-zinc-500">«Descargar PDF» abre la impresión; elige «Guardar como PDF».</span>
@@ -59,12 +60,12 @@ export default async function Page({ params, searchParams }: PageProps<"/memoria
               <form action={accionComprar} className="mt-3 flex flex-wrap items-center gap-3">
                 <input type="hidden" name="tipo" value="firma" />
                 <input type="hidden" name="folio" value={m.folio} />
-                <Boton>Pedir revisión y firma · {pesos(FIRMA_SUELOS_CENTAVOS)}</Boton>
+                <Boton>Pedir revisión y firma · {pesos(FIRMA_CENTAVOS[m.estudio])}</Boton>
               </form>
             </section>
             <ContactoVentas
               interes="firma"
-              estudio="suelos"
+              estudio={m.estudio}
               titulo="¿Prefieres hablar con alguien antes?"
               descripcion="Déjanos tu WhatsApp y te contactamos para resolver tus dudas."
             />
@@ -86,7 +87,7 @@ export default async function Page({ params, searchParams }: PageProps<"/memoria
             <h2 className="text-lg font-semibold">El ingeniero pidió cambios</h2>
             <p className="mt-2 whitespace-pre-wrap text-sm">{m.notasRevision}</p>
             <div className="mt-4 flex flex-wrap items-center gap-3">
-              <Link href={`/civil/suelos?folio=${m.folio}`} className={botonSecundario}>
+              <Link href={`${ESTUDIOS[m.estudio].ruta}?folio=${m.folio}`} className={botonSecundario}>
                 Corregir datos
               </Link>
               <form action={accionReenviar}>
@@ -110,7 +111,7 @@ export default async function Page({ params, searchParams }: PageProps<"/memoria
       </div>
 
       <div className="mt-6">
-        <Memoria snapshot={snapshotDe(m)} />
+        <MemoriaDeRegistro m={m} />
       </div>
     </main>
   );

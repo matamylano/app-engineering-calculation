@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { accionComprar, accionSalir } from "@/app/acciones";
 import { Boton, EstadoPill, fechaCorta, Mensajes } from "@/components/ui";
 import { PAQUETES, pesos } from "@/lib/pagos/catalogo";
+import { ESTUDIOS } from "@/lib/estudios/registro";
 import { almacen } from "@/lib/servidor/config";
 import { sesionActual } from "@/lib/servidor/sesion";
 
@@ -63,8 +64,8 @@ export default async function Page({ searchParams }: PageProps<"/cuenta">) {
       <section className="mt-6 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
         <div className="flex items-baseline justify-between">
           <h2 className="text-lg font-semibold">Mis memorias</h2>
-          <Link href="/civil/suelos" className="text-sm font-medium underline">
-            Nuevo estudio de suelos
+          <Link href="/civil" className="text-sm font-medium underline">
+            Nuevo estudio
           </Link>
         </div>
         {memorias.length === 0 ? (
@@ -76,7 +77,7 @@ export default async function Page({ searchParams }: PageProps<"/cuenta">) {
                 <Link href={`/memorias/${m.folio}`} className="grid">
                   <span className="font-mono text-sm font-medium">{m.folio}</span>
                   <span className="text-sm text-zinc-600 dark:text-zinc-400">
-                    {m.datos.proyecto.obra || "Sin nombre de obra"} · {fechaCorta(m.creadaEn)}
+                    {ESTUDIOS[m.estudio].titulo} · {m.datos.proyecto.obra || "Sin nombre de obra"} · {fechaCorta(m.creadaEn)}
                   </span>
                 </Link>
                 <EstadoPill estado={m.estado} />

@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
-import Memoria, { snapshotDe } from "@/app/civil/suelos/Memoria";
+import MemoriaDeRegistro from "@/components/MemoriaDeRegistro";
 import { EstadoPill } from "@/components/ui";
 import { almacen } from "@/lib/servidor/config";
 import { FOLIO_VALIDO } from "@/lib/servidor/memorias";
@@ -41,7 +41,7 @@ export default async function Page({ params }: PageProps<"/firma/[folio]">) {
         )}
       </div>
       <div className="mt-6">
-        <Memoria snapshot={snapshotDe(m)} />
+        <MemoriaDeRegistro m={m} />
       </div>
     </main>
   );
