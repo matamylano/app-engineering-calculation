@@ -1,6 +1,8 @@
 import type { SoilStudyInput, SoilStudyResult } from "@/calc/soils/study";
 import type { UnitSystem } from "@/calc/units";
 import type { EntradaBajada, ResultadoBajada } from "@/calc/cargas/bajada";
+import type { EntradaFosa, ResultadoFosa } from "@/calc/drenaje/fosa";
+import type { EntradaPluvial, ResultadoPluvial } from "@/calc/drenaje/pluvial";
 import type { EntradaPozo, ResultadoPozo } from "@/calc/pozos/pozo";
 import type { EntradaCasa, ResultadoCasa } from "@/calc/hidrosanitaria/casa";
 import type { EntradaColumna, ResultadoColumna } from "@/calc/concreto/columna";
@@ -10,6 +12,8 @@ import type { EntradaZapata, ResultadoZapata } from "@/calc/concreto/zapata";
 import type { FormularioCargas } from "@/lib/estudios/cargas";
 import type { ProjectInfo } from "@/lib/estudios/proyecto";
 import type { FormularioSuelos } from "@/lib/estudios/suelos";
+import type { FormularioFosa } from "@/lib/estudios/fosa";
+import type { FormularioPluvial } from "@/lib/estudios/pluvial";
 import type { FormularioPozo } from "@/lib/estudios/pozo";
 import type { FormularioHidrosanitaria } from "@/lib/estudios/hidrosanitaria";
 import type { FormularioColumna } from "@/lib/estudios/columna";
@@ -49,7 +53,7 @@ export interface FirmaMemoria extends PerfilFirmante {
   huella: string;
 }
 
-export type Estudio = "suelos" | "cargas" | "zapata" | "viga" | "losa" | "columna" | "hidrosanitaria" | "pozo";
+export type Estudio = "suelos" | "cargas" | "zapata" | "viga" | "losa" | "columna" | "hidrosanitaria" | "pozo" | "pluvial" | "fosa";
 
 export interface DatosSuelos {
   formulario: FormularioSuelos;
@@ -108,8 +112,22 @@ export interface DatosPozo {
   resultado: ResultadoPozo;
 }
 
+export interface DatosPluvial {
+  formulario: FormularioPluvial;
+  proyecto: ProjectInfo;
+  entrada: EntradaPluvial;
+  resultado: ResultadoPluvial;
+}
+
+export interface DatosFosa {
+  formulario: FormularioFosa;
+  proyecto: ProjectInfo;
+  entrada: EntradaFosa;
+  resultado: ResultadoFosa;
+}
+
 /** Datos de la memoria; su forma depende de `RegistroMemoria.estudio`. */
-export type DatosMemoria = DatosSuelos | DatosCargas | DatosZapata | DatosViga | DatosLosa | DatosColumna | DatosHidrosanitaria | DatosPozo;
+export type DatosMemoria = DatosSuelos | DatosCargas | DatosZapata | DatosViga | DatosLosa | DatosColumna | DatosHidrosanitaria | DatosPozo | DatosPluvial | DatosFosa;
 
 export interface RegistroMemoria {
   folio: string;

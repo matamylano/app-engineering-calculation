@@ -27,6 +27,8 @@ export const FIRMA_CENTAVOS = {
   columna: 150_000,
   hidrosanitaria: 150_000,
   pozo: 300_000,
+  pluvial: 150_000,
+  fosa: 150_000,
 } as const satisfies Record<Estudio, number>;
 
 export const FIRMA_SUELOS_CENTAVOS = FIRMA_CENTAVOS.suelos;
