@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { esFirmante, secretoSesion } from "./config";
+import { esFirmante, secretoSesion, urlApp } from "./config";
 import { crearToken, DURACION_SESION_S, leerToken } from "./token";
 import type { Usuario } from "./tipos";
 
@@ -19,7 +19,8 @@ export async function sesionActual(): Promise<Sesion | null> {
 export async function abrirSesion(u: Usuario) {
   (await cookies()).set(COOKIE, crearToken(u, secretoSesion()), {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    // Segura cuando la app se sirve por https; así también entra en Docker por http.
+    secure: urlApp().startsWith("https://"),
     sameSite: "lax",
     path: "/",
     maxAge: DURACION_SESION_S,

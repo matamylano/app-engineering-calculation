@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Carpeta autocontenida en .next/standalone para la imagen de Docker.
+  output: "standalone",
 };
 
 export default nextConfig;

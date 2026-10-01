@@ -1,0 +1,12 @@
+# docker compose up --build  →  http://localhost:3000
+# Sin variables corre en modo demostración. Para Supabase o Stripe reales,
+# copia .env.example a .env y llénalo.
+services:
+  suite:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - path: .env
+        required: false
+    restart: unless-stopped

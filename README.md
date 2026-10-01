@@ -51,6 +51,8 @@ npm run typecheck
 npm run build
 ```
 
+Para probarla en Docker: `docker compose up --build` y abre http://localhost:3000. Detalles en [docs/docker.md](docs/docker.md). Las variables están en `.env.example`.
+
 ## Validación
 
 Ningún estudio se publica hasta que el ingeniero responsable reproduzca sus casos de validación. Nc y Nq usan las expresiones cerradas de Terzaghi; Nγ se interpola en la tabla de Kumbhojkar (1993).
