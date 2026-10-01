@@ -10,6 +10,8 @@ docker compose up --build
 
 Abre http://localhost:3000. La primera vez tarda unos minutos en construir.
 
+O, sin clonar a mano: baja `scripts/levantar-suite.sh` (Mac o Linux, `bash levantar-suite.sh`) o `scripts/levantar-suite.ps1` (Windows, clic derecho → «Ejecutar con PowerShell»). Revisan git y Docker, bajan o actualizan el proyecto y lo levantan.
+
 ## Modo demostración (sin configurar nada)
 
 Sin archivo `.env` la app corre completa con datos en memoria:
