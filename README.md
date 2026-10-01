@@ -13,7 +13,8 @@ Suite web de estudios de ingeniería con memoria de cálculo lista para firma. H
 | Ingeniería civil | Losa maciza en una dirección: acero por metro arriba y abajo, temperatura, cortante y espesor mínimo | Disponible |
 | Ingeniería civil | Columna de concreto: flexocompresión por compatibilidad de deformaciones, excentricidad mínima, esbeltez, acero longitudinal y estribos | Disponible |
 | Ingeniería civil | Instalación hidráulica y sanitaria: demanda, cisterna y tinaco, gasto de Hunter, diámetros con Hazen-Williams, bomba y drenaje | Disponible |
-| Ingeniería civil | Losa en dos direcciones, pozos, drenaje | Próximamente |
+| Ingeniería civil | Pozo de agua: prueba de bombeo (Cooper-Jacob), abatimiento de diseño, ademe, rejilla y bomba sumergible | Disponible |
+| Ingeniería civil | Losa en dos direcciones, drenaje pluvial, fosa séptica | Próximamente |
 | Paquetes 2 y 3 | Por definir | Próximamente |
 
 Normas: NTC-CDMX 2023 (Cimentaciones, Criterios y Acciones, Concreto), ASTM D2487. Mientras el ingeniero responsable no valide las fórmulas de un estudio, `enValidacion` en `src/lib/estudios/registro.ts` y `src/calc/suite.ts` muestra el aviso «En validación». Unidades de obra (t/m², t/m³, kg/cm²) o SI; el motor calcula en SI.
@@ -24,6 +25,7 @@ Normas: NTC-CDMX 2023 (Cimentaciones, Criterios y Acciones, Concreto), ASTM D248
   - `soils/`: SUCS, Terzaghi, asentamientos y el estudio completo (`study.ts`).
   - `cargas/`: bajada de cargas (en kg/m² y t, como se usa en obra).
   - `hidrosanitaria/`: instalación de una casa; `tablas.ts` junta unidades mueble, curva de Hunter, tubos y criterios.
+  - `pozos/`: pozo de agua; `tablas.ts` junta ademes, velocidad de entrada, columnas y eficiencia.
   - `concreto/`: diseño de elementos de concreto reforzado; `ntc.ts` junta las constantes de las NTC de Concreto para que el ingeniero responsable las revise.
   - `units.ts`: conversión entre SI y unidades de obra.
   - `suite.ts`: catálogo de paquetes y estudios que muestra la página inicial.

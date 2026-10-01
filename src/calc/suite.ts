@@ -92,10 +92,12 @@ export const PACKAGES: Package[] = [
         enValidacion: true,
       },
       {
-        slug: "pozos",
-        title: "Pozos y tuberías",
-        description: "Ademe y rejilla, columna y bomba, prueba de bombeo.",
-        status: "proximamente",
+        slug: "pozo",
+        title: "Pozo de agua",
+        description: "Prueba de bombeo, abatimiento, ademe, rejilla y bomba sumergible.",
+        status: "disponible",
+        href: "/civil/pozo",
+        enValidacion: true,
       },
       {
         slug: "drenaje",

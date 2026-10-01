@@ -3,15 +3,17 @@
  * y su componente de memoria, y una entrada aquí.
  */
 import { bajadaDeCargas } from "@/calc/cargas/bajada";
+import { disenarPozo } from "@/calc/pozos/pozo";
 import { disenarCasa } from "@/calc/hidrosanitaria/casa";
 import { disenarColumna } from "@/calc/concreto/columna";
 import { disenarLosa } from "@/calc/concreto/losa";
 import { disenarViga, problemasViga } from "@/calc/concreto/viga";
 import { disenarZapata } from "@/calc/concreto/zapata";
 import { runSoilStudy } from "@/calc/soils/study";
-import type { DatosCargas, DatosColumna, DatosHidrosanitaria, DatosLosa, DatosMemoria, DatosSuelos, DatosViga, DatosZapata, Estudio } from "@/lib/servidor/tipos";
+import type { DatosCargas, DatosColumna, DatosHidrosanitaria, DatosLosa, DatosMemoria, DatosPozo, DatosSuelos, DatosViga, DatosZapata, Estudio } from "@/lib/servidor/tipos";
 import { entradaCargas, leerFormularioCargas } from "./cargas";
 import { entradaDesdeFormulario, leerFormulario, unitsOf } from "./suelos";
+import { entradaPozo, leerFormularioPozo } from "./pozo";
 import { entradaHidrosanitaria, leerFormularioHidrosanitaria } from "./hidrosanitaria";
 import { entradaColumna, leerFormularioColumna } from "./columna";
 import { entradaLosa, leerFormularioLosa } from "./losa";
@@ -43,6 +45,7 @@ export const ESTUDIOS: Record<Estudio, InfoEstudio> = {
     ruta: "/civil/hidrosanitaria",
     enValidacion: true,
   },
+  pozo: { titulo: "Pozo de agua", prefijo: "POZ", ruta: "/civil/pozo", enValidacion: true },
 };
 
 export const esEstudio = (x: unknown): x is Estudio => typeof x === "string" && x in ESTUDIOS;
@@ -140,6 +143,19 @@ function calcularHidrosanitaria(raw: unknown): Calculo<DatosHidrosanitaria> {
   }
 }
 
+function calcularPozo(raw: unknown): Calculo<DatosPozo> {
+  const formulario = leerFormularioPozo(raw);
+  if (!formulario) return { ok: false, error: "Los datos del formulario no son válidos." };
+  const entrada = entradaPozo(formulario);
+  try {
+    const resultado = disenarPozo(entrada);
+    if (!resultado.cumple) return { ok: false, error: `El pozo no pasa: ${resultado.problemas.join("; ")}.` };
+    return { ok: true, valor: { formulario, proyecto: formulario.project, entrada, resultado } };
+  } catch (e) {
+    return { ok: false, error: `Corrige los datos: ${errorDe(e)}` };
+  }
+}
+
 const CALCULOS: Record<Estudio, (raw: unknown) => Calculo<DatosMemoria>> = {
   suelos: calcularSuelos,
   cargas: calcularCargas,
@@ -148,6 +164,7 @@ const CALCULOS: Record<Estudio, (raw: unknown) => Calculo<DatosMemoria>> = {
   losa: calcularLosa,
   columna: calcularColumna,
   hidrosanitaria: calcularHidrosanitaria,
+  pozo: calcularPozo,
 };
 
 /** Valida y recalcula en el servidor el formulario de un estudio. */

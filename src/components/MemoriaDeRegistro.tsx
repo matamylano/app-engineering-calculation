@@ -3,6 +3,7 @@ import Memoria, { snapshotDe } from "@/app/civil/suelos/Memoria";
 import MemoriaColumna from "@/app/civil/columna/MemoriaColumna";
 import MemoriaHidrosanitaria from "@/app/civil/hidrosanitaria/MemoriaHidrosanitaria";
 import MemoriaLosa from "@/app/civil/losa/MemoriaLosa";
+import MemoriaPozo from "@/app/civil/pozo/MemoriaPozo";
 import MemoriaViga from "@/app/civil/viga/MemoriaViga";
 import MemoriaZapata from "@/app/civil/zapata/MemoriaZapata";
 import type { RegistroMemoria } from "@/lib/servidor/tipos";
@@ -18,6 +19,8 @@ export default function MemoriaDeRegistro({ m }: { m: RegistroMemoria }) {
       return <MemoriaHidrosanitaria m={m} />;
     case "losa":
       return <MemoriaLosa m={m} />;
+    case "pozo":
+      return <MemoriaPozo m={m} />;
     case "viga":
       return <MemoriaViga m={m} />;
     case "zapata":
