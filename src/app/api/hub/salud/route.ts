@@ -1,3 +1,4 @@
+import { stripeConfigurado, supabaseConfigurado } from "@/lib/servidor/config";
 import { agenteVentasConfigurado } from "@/lib/ventas/agentsales";
 import { whatsapp } from "@/lib/whatsapp";
 import { respuestaSalud } from "@/lib/whatsapp/hub-cliente";
@@ -14,6 +15,8 @@ export async function GET() {
       whatsapp_configurado: aviso === null,
       [`whatsapp_${conector.modo}`]: true,
       agente_ventas_configurado: agenteVentasConfigurado(),
+      cuentas_configuradas: supabaseConfigurado(),
+      pagos_configurados: stripeConfigurado(),
     },
   });
 }

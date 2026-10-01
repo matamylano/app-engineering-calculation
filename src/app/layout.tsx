@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Link from "next/link";
-import CreditsBadge from "@/components/CreditsBadge";
+import Cabecera from "@/components/Cabecera";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -23,14 +22,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html lang="es" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        <header className="no-print border-b border-zinc-200 dark:border-zinc-800">
-          <div className="mx-auto flex w-full max-w-5xl items-center justify-between px-4 py-3">
-            <Link href="/" className="font-semibold tracking-tight">
-              Suite de Ingeniería
-            </Link>
-            <CreditsBadge />
-          </div>
-        </header>
+        <Cabecera />
         {children}
       </body>
     </html>

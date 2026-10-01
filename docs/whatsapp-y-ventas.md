@@ -38,6 +38,8 @@ El formulario aparece en el estudio de suelos en dos momentos: al generar la mem
 3. En agentsales: crear un tenant para la suite y un `config_modo` de venta de estudios de ingeniería (prompt, criterios y objeciones). Poner `AGENTSALES_URL`, `AGENTSALES_API_KEY` y `AGENTSALES_TENANT_ID` en la suite.
 4. En el Hub, enrutar el número de WhatsApp de ventas al agente (capacidad `agente-ventas`).
 
-## Lo que sigue
+## Avisos de la suite
 
-Cuando existan cuentas y pagos, la suite mandará avisos propios por el Hub: memoria lista, memoria firmada por el ingeniero, pago recibido y créditos por acabarse. Esos avisos usan plantillas aprobadas y una `clave` por memoria para no duplicar.
+Ya se mandan por el Hub (ver [cuentas-pagos-y-firma.md](cuentas-pagos-y-firma.md)): al ingeniero cuando llega una memoria por revisar (`AVISO_FIRMA_TELEFONO`) y al cliente cuando su memoria se aprueba o se le piden cambios. Cada aviso lleva una `clave` por memoria y versión para no duplicarse. Son mensajes de texto; fuera de la ventana de 24 horas de WhatsApp hará falta una plantilla aprobada.
+
+Falta: aviso de pago recibido y de créditos por acabarse.

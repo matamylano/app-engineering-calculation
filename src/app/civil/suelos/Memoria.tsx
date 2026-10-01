@@ -2,15 +2,8 @@ import type { ReactNode } from "react";
 import type { SoilStudyInput, SoilStudyResult } from "@/calc/soils/study";
 import { fromKNm3, fromKPa, type UnitSystem } from "@/calc/units";
 import { fmt } from "@/components/form";
-
-export interface ProjectInfo {
-  obra: string;
-  ubicacion: string;
-  cliente: string;
-  responsable: string;
-  cedula: string;
-  registro: string;
-}
+import type { ProjectInfo } from "@/lib/estudios/suelos";
+import type { FirmaMemoria, RegistroMemoria } from "@/lib/servidor/tipos";
 
 export interface MemoriaSnapshot {
   folio: string;
@@ -19,7 +12,21 @@ export interface MemoriaSnapshot {
   units: UnitSystem;
   input: SoilStudyInput;
   result: SoilStudyResult;
+  /** Firma del ingeniero de la suite, cuando ya la aprobó. */
+  firma?: FirmaMemoria;
 }
+
+export const snapshotDe = (m: RegistroMemoria): MemoriaSnapshot => ({
+  folio: m.folio,
+  date: m.firma?.aprobadaEn ?? m.actualizadaEn,
+  project: m.datos.proyecto,
+  units: m.datos.unidades,
+  input: m.datos.entrada,
+  result: m.datos.resultado,
+  firma: m.firma,
+});
+
+const ZONA = "America/Mexico_City";
 
 const SHAPE_NAME = { corrida: "corrida", cuadrada: "cuadrada", circular: "circular" } as const;
 
@@ -53,7 +60,10 @@ function Rows({ rows }: { rows: [string, string][] }) {
 const blank = (s: string) => (s.trim() === "" ? "________________________" : s);
 
 export default function Memoria({ snapshot }: { snapshot: MemoriaSnapshot }) {
-  const { folio, date, project, units, input, result } = snapshot;
+  const { folio, date, project, units, input, result, firma } = snapshot;
+  const responsable = firma
+    ? { nombre: firma.nombre, cedula: firma.cedula, registro: firma.registro }
+    : { nombre: project.responsable, cedula: project.cedula, registro: project.registro };
   if (!result.sucs.ok || !result.bearing.ok || !result.settlement.ok) return null;
   const sucs = result.sucs.value;
   const b = result.bearing.value;
@@ -63,7 +73,7 @@ export default function Memoria({ snapshot }: { snapshot: MemoriaSnapshot }) {
   const wt = (kN: number) => `${fmt(fromKNm3(kN, units.unitWeight))} ${units.unitWeight}`;
   const cm = (m: number) => `${fmt(m * 100)} cm`;
   const shape = SHAPE_NAME[input.bearing.shape];
-  const fecha = new Date(date).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric" });
+  const fecha = new Date(date).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: ZONA });
   const sc = input.bearing.shape === "corrida" ? "1.0" : "1.3";
   const sg = { corrida: "0.5", cuadrada: "0.4", circular: "0.3" }[input.bearing.shape];
 
@@ -191,13 +201,13 @@ export default function Memoria({ snapshot }: { snapshot: MemoriaSnapshot }) {
         <div className="mt-6 grid gap-8 sm:grid-cols-2">
           <div className="text-sm">
             <p>
-              <b>Nombre:</b> {blank(project.responsable)}
+              <b>Nombre:</b> {blank(responsable.nombre)}
             </p>
             <p className="mt-2">
-              <b>Cédula profesional:</b> {blank(project.cedula)}
+              <b>Cédula profesional:</b> {blank(responsable.cedula)}
             </p>
             <p className="mt-2">
-              <b>Registro:</b> {blank(project.registro)}
+              <b>Registro:</b> {blank(responsable.registro)}
             </p>
             <div className="mt-16 border-t border-black pt-1 text-center">Firma</div>
           </div>
@@ -205,6 +215,13 @@ export default function Memoria({ snapshot }: { snapshot: MemoriaSnapshot }) {
             Sello
           </div>
         </div>
+        {firma && (
+          <p className="mt-6 text-xs">
+            Revisada y aprobada por {firma.nombre} el{" "}
+            {new Date(firma.aprobadaEn).toLocaleString("es-MX", { dateStyle: "long", timeStyle: "short", timeZone: ZONA })}. Huella
+            SHA-256: <span className="break-all font-mono">{firma.huella}</span>
+          </p>
+        )}
         <p className="mt-8 text-xs">
           Folio {folio}. Este documento no tiene validez sin la firma autógrafa del ingeniero responsable, quien
           asume la responsabilidad técnica del estudio.

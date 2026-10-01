@@ -1,13 +1,21 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { FailureMode, FootingShape } from "@/calc/soils/terzaghi";
-import { runSoilStudy, type SoilStudyInput, type SoilStudyResult } from "@/calc/soils/study";
-import { fromKPa, toKNm3, toKPa, UNIT_SYSTEMS, type UnitSystem } from "@/calc/units";
-import { useCredits } from "@/lib/credits";
-import { Check, ErrorText, Field, fmt, num, optNum, ResultRow, Section, Select } from "@/components/form";
-import ContactoVentas from "@/components/ContactoVentas";
-import Memoria, { type MemoriaSnapshot, type ProjectInfo } from "./Memoria";
+import { runSoilStudy, type SoilStudyResult } from "@/calc/soils/study";
+import { fromKPa, UNIT_SYSTEMS } from "@/calc/units";
+import { Check, ErrorText, Field, fmt, ResultRow, Section, Select } from "@/components/form";
+import {
+  entradaDesdeFormulario,
+  FORMULARIO_INICIAL,
+  unitsOf,
+  type FormularioSuelos,
+  type ProjectInfo,
+  type ValueKey,
+} from "@/lib/estudios/suelos";
+import { accionGuardarMemoria } from "@/app/acciones";
 
 const SHAPES: { value: FootingShape; label: string }[] = [
   { value: "cuadrada", label: "Zapata cuadrada" },
@@ -20,122 +28,54 @@ const FAILURE: { value: FailureMode; label: string }[] = [
   { value: "local", label: "Corte local (suelo suelto o blando)" },
 ];
 
-type Values = Record<string, string>;
+/** Borrador del formulario mientras el usuario entra con su correo. */
+const BORRADOR = "suelos-borrador";
 
-/** Valores de ejemplo en unidades de obra (t/m², t/m³). */
-const DEFAULTS: Values = {
-  p200: "35",
-  p4: "90",
-  ll: "32",
-  pl: "20",
-  cu: "",
-  cc: "",
-  c: "2",
-  phi: "28",
-  gamma: "1.8",
-  df: "1.2",
-  b: "1.5",
-  fs: "3",
-  dw: "",
-  gammaSat: "1.95",
-  pressure: "",
-  es: "1500",
-  nu: "0.3",
-  z: "",
-  h: "",
-  s0: "",
-  e0: "",
-  ccomp: "",
-  cs: "",
-  pc: "",
-};
-
-const EMPTY_PROJECT: ProjectInfo = {
-  obra: "",
-  ubicacion: "",
-  cliente: "",
-  responsable: "",
-  cedula: "",
-  registro: "",
-};
-
-function newFolio() {
-  const d = new Date();
-  const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, "0")}${String(d.getDate()).padStart(2, "0")}`;
-  const rand = Math.floor(Math.random() * 0xffff)
-    .toString(16)
-    .toUpperCase()
-    .padStart(4, "0");
-  return `SUE-${ymd}-${rand}`;
+interface Props {
+  /** Memoria que se está corrigiendo (no gasta otro crédito). */
+  folio?: string;
+  inicial?: FormularioSuelos;
+  /** Créditos del usuario, o null si no ha entrado. */
+  creditos: number | null;
 }
 
-export default function SoilStudy() {
-  const [units, setUnits] = useState<UnitSystem>(UNIT_SYSTEMS[0]);
-  const [v, setV] = useState<Values>(DEFAULTS);
-  const [plastic, setPlastic] = useState(true);
-  const [shape, setShape] = useState<FootingShape>("cuadrada");
-  const [failure, setFailure] = useState<FailureMode>("general");
-  const [hasWater, setHasWater] = useState(false);
-  const [useQa, setUseQa] = useState(true);
-  const [hasClay, setHasClay] = useState(false);
-  const [preconsolidated, setPreconsolidated] = useState(false);
-  const [project, setProject] = useState<ProjectInfo>(EMPTY_PROJECT);
-  const [snapshot, setSnapshot] = useState<MemoriaSnapshot | null>(null);
+export default function SoilStudy({ folio, inicial, creditos }: Props) {
+  const router = useRouter();
+  const [f, setF] = useState<FormularioSuelos>(inicial ?? FORMULARIO_INICIAL);
   const [notice, setNotice] = useState<string | null>(null);
-  const { credits, spend } = useCredits();
+  const [pending, startTransition] = useTransition();
 
-  const set = (key: string) => (value: string) => setV((prev) => ({ ...prev, [key]: value }));
-  const setP = (key: keyof ProjectInfo) => (value: string) => setProject((prev) => ({ ...prev, [key]: value }));
+  // Si el usuario tuvo que entrar con su correo, recupera lo que había capturado.
+  useEffect(() => {
+    if (folio) return;
+    try {
+      const raw = window.sessionStorage.getItem(BORRADOR);
+      if (!raw) return;
+      window.sessionStorage.removeItem(BORRADOR);
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- se lee una sola vez al montar
+      setF({ ...FORMULARIO_INICIAL, ...(JSON.parse(raw) as FormularioSuelos) });
+    } catch {
+      // Sin almacenamiento: se queda con los valores de ejemplo.
+    }
+  }, [folio]);
+
+  const v = f.values;
+  const set = (key: ValueKey) => (value: string) => setF((p) => ({ ...p, values: { ...p.values, [key]: value } }));
+  const setP = (key: keyof ProjectInfo) => (value: string) =>
+    setF((p) => ({ ...p, project: { ...p.project, [key]: value } }));
+  const flag = (key: "plastic" | "hasWater" | "useQa" | "hasClay" | "preconsolidated") => (value: boolean) =>
+    setF((p) => ({ ...p, [key]: value }));
+  const { plastic, shape, failure, hasWater, useQa, hasClay, preconsolidated, project } = f;
+  const units = unitsOf(f);
 
   const S = units.stress;
   const W = units.unitWeight;
 
-  const input = useMemo((): SoilStudyInput => {
-    const n = (s: string) => num(s);
-    const stress = (s: string) => toKPa(num(s), units.stress);
-    const weight = (s: string) => toKNm3(num(s), units.unitWeight);
-    return {
-      sucs: {
-        passingNo200: n(v.p200),
-        passingNo4: n(v.p4),
-        liquidLimit: plastic ? n(v.ll) : undefined,
-        plasticLimit: plastic ? n(v.pl) : undefined,
-        uniformity: optNum(v.cu),
-        curvature: optNum(v.cc),
-      },
-      bearing: {
-        cohesion: stress(v.c),
-        frictionAngle: n(v.phi),
-        unitWeight: weight(v.gamma),
-        depth: n(v.df),
-        width: n(v.b),
-        shape,
-        failureMode: failure,
-        safetyFactor: n(v.fs),
-        waterTable: hasWater ? { depth: n(v.dw), saturatedUnitWeight: weight(v.gammaSat) } : undefined,
-      },
-      settlement: {
-        pressure: useQa ? undefined : stress(v.pressure),
-        elasticModulus: stress(v.es),
-        poisson: n(v.nu),
-        consolidation: hasClay
-          ? {
-              depthToMidLayer: n(v.z),
-              thickness: n(v.h),
-              initialStress: stress(v.s0),
-              voidRatio: n(v.e0),
-              compressionIndex: n(v.ccomp),
-              recompressionIndex: preconsolidated ? n(v.cs) : undefined,
-              preconsolidationStress: preconsolidated ? stress(v.pc) : undefined,
-            }
-          : undefined,
-      },
-    };
-  }, [v, plastic, shape, failure, hasWater, useQa, hasClay, preconsolidated, units]);
-
+  const input = useMemo(() => entradaDesdeFormulario(f), [f]);
   const result: SoilStudyResult = useMemo(() => runSoilStudy(input), [input]);
   const allOk = result.sucs.ok && result.bearing.ok && result.settlement.ok;
   const st = (kPa: number, d = 2) => `${fmt(fromKPa(kPa, S), d)} ${S}`;
+  const sinCreditos = !folio && creditos !== null && creditos < 1;
 
   const generate = () => {
     setNotice(null);
@@ -143,19 +83,22 @@ export default function SoilStudy() {
       setNotice("Corrige los datos marcados en rojo antes de generar la memoria.");
       return;
     }
-    // Actualizar una memoria ya generada no gasta otro crédito.
-    const folio = snapshot?.folio;
-    if (!folio && !spend()) {
-      setNotice("Ya no tienes créditos. La compra de créditos estará disponible pronto.");
-      return;
-    }
-    setSnapshot({
-      folio: folio ?? newFolio(),
-      date: new Date().toISOString(),
-      project,
-      units,
-      input,
-      result,
+    startTransition(async () => {
+      const r = await accionGuardarMemoria(f, folio);
+      if (r.ok) {
+        router.push(`/memorias/${r.folio}`);
+        return;
+      }
+      if (r.entrar) {
+        try {
+          window.sessionStorage.setItem(BORRADOR, JSON.stringify(f));
+        } catch {
+          // Sin almacenamiento: al volver se pierden los datos capturados.
+        }
+        router.push(`/entrar?siguiente=${encodeURIComponent("/civil/suelos")}`);
+        return;
+      }
+      setNotice(r.error);
     });
   };
 
@@ -176,7 +119,7 @@ export default function SoilStudy() {
               label="Unidades"
               value={units.id}
               options={UNIT_SYSTEMS.map((u) => ({ value: u.id, label: u.label }))}
-              onChange={(id) => setUnits(UNIT_SYSTEMS.find((u) => u.id === id) ?? UNIT_SYSTEMS[0])}
+              onChange={(id) => setF((p) => ({ ...p, unitsId: id }))}
             />
           </div>
         </Section>
@@ -186,7 +129,7 @@ export default function SoilStudy() {
             <Field label="Pasa la malla No. 200" unit="%" value={v.p200} onChange={set("p200")} />
             <Field label="Pasa la malla No. 4" unit="%" value={v.p4} onChange={set("p4")} />
             <div className="flex items-end pb-2">
-              <Check label="El suelo es plástico" checked={plastic} onChange={setPlastic} />
+              <Check label="El suelo es plástico" checked={plastic} onChange={flag("plastic")} />
             </div>
             {plastic && <Field label="Límite líquido, LL" unit="%" value={v.ll} onChange={set("ll")} />}
             {plastic && <Field label="Límite plástico, LP" unit="%" value={v.pl} onChange={set("pl")} />}
@@ -209,8 +152,8 @@ export default function SoilStudy() {
 
         <Section title="2. Capacidad de carga (Terzaghi)">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            <Select label="Cimentación" value={shape} options={SHAPES} onChange={setShape} />
-            <Select label="Tipo de falla" value={failure} options={FAILURE} onChange={setFailure} />
+            <Select label="Cimentación" value={shape} options={SHAPES} onChange={(x) => setF((p) => ({ ...p, shape: x }))} />
+            <Select label="Tipo de falla" value={failure} options={FAILURE} onChange={(x) => setF((p) => ({ ...p, failure: x }))} />
             <Field label="Factor de seguridad, FS" value={v.fs} onChange={set("fs")} />
             <Field label="Cohesión, c" unit={S} value={v.c} onChange={set("c")} />
             <Field label="Ángulo de fricción, φ" unit="°" value={v.phi} onChange={set("phi")} />
@@ -218,7 +161,7 @@ export default function SoilStudy() {
             <Field label="Profundidad de desplante, Df" unit="m" value={v.df} onChange={set("df")} />
             <Field label={shape === "circular" ? "Diámetro, B" : "Ancho, B"} unit="m" value={v.b} onChange={set("b")} />
             <div className="flex items-end pb-2">
-              <Check label="Hay nivel freático" checked={hasWater} onChange={setHasWater} />
+              <Check label="Hay nivel freático" checked={hasWater} onChange={flag("hasWater")} />
             </div>
             {hasWater && <Field label="Profundidad del NF" unit="m" value={v.dw} onChange={set("dw")} />}
             {hasWater && <Field label="Peso volumétrico saturado" unit={W} value={v.gammaSat} onChange={set("gammaSat")} />}
@@ -241,13 +184,13 @@ export default function SoilStudy() {
         <Section title="3. Asentamientos">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
             <div className="flex items-end pb-2">
-              <Check label="Usar qa como presión de contacto" checked={useQa} onChange={setUseQa} />
+              <Check label="Usar qa como presión de contacto" checked={useQa} onChange={flag("useQa")} />
             </div>
             {!useQa && <Field label="Presión de contacto, q" unit={S} value={v.pressure} onChange={set("pressure")} />}
             <Field label="Módulo de elasticidad, Es" unit={S} value={v.es} onChange={set("es")} />
             <Field label="Relación de Poisson, ν" value={v.nu} onChange={set("nu")} />
             <div className="flex items-end pb-2">
-              <Check label="Hay un estrato de arcilla compresible" checked={hasClay} onChange={setHasClay} />
+              <Check label="Hay un estrato de arcilla compresible" checked={hasClay} onChange={flag("hasClay")} />
             </div>
           </div>
           {hasClay && (
@@ -258,7 +201,7 @@ export default function SoilStudy() {
               <Field label="Relación de vacíos, e0" value={v.e0} onChange={set("e0")} />
               <Field label="Índice de compresión, Cc" value={v.ccomp} onChange={set("ccomp")} />
               <div className="flex items-end pb-2">
-                <Check label="Arcilla preconsolidada" checked={preconsolidated} onChange={setPreconsolidated} />
+                <Check label="Arcilla preconsolidada" checked={preconsolidated} onChange={flag("preconsolidated")} />
               </div>
               {preconsolidated && <Field label="Índice de recompresión, Cs" value={v.cs} onChange={set("cs")} />}
               {preconsolidated && <Field label="Preconsolidación, σ'c" unit={S} value={v.pc} onChange={set("pc")} />}
@@ -286,45 +229,30 @@ export default function SoilStudy() {
           <button
             type="button"
             onClick={generate}
-            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
+            disabled={pending || sinCreditos}
+            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
           >
-            {snapshot ? "Actualizar memoria" : "Generar memoria (1 crédito)"}
+            {pending ? "Guardando…" : folio ? "Guardar cambios en la memoria" : "Generar memoria (1 crédito)"}
           </button>
-          {snapshot && (
-            <button
-              type="button"
-              onClick={() => window.print()}
-              className="rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium hover:border-zinc-500 dark:border-zinc-700"
-            >
-              Descargar PDF
-            </button>
-          )}
           <span className="text-sm text-zinc-500">
-            {snapshot
-              ? "«Descargar PDF» abre la impresión; elige «Guardar como PDF»."
-              : `Te quedan ${credits} ${credits === 1 ? "crédito" : "créditos"}.`}
+            {folio
+              ? `Corriges la memoria ${folio}; no gasta otro crédito.`
+              : creditos === null
+                ? "Para generar la memoria entra con tu correo; las cuentas nuevas traen créditos gratis."
+                : `Te ${creditos === 1 ? "queda" : "quedan"} ${creditos} ${creditos === 1 ? "crédito" : "créditos"}.`}
           </span>
         </div>
         {notice && <ErrorText>{notice}</ErrorText>}
-        {!snapshot && credits === 0 && (
-          <ContactoVentas
-            interes="creditos"
-            estudio="suelos"
-            titulo="Consigue más créditos"
-            descripcion="Déjanos tu WhatsApp y te mandamos los paquetes de créditos disponibles."
-          />
-        )}
-        {snapshot && (
-          <ContactoVentas
-            interes="firma"
-            estudio="suelos"
-            titulo="¿No tienes quién firme el estudio?"
-            descripcion="Un ingeniero con registro puede revisarlo y firmarlo por ti. Déjanos tu WhatsApp y te contactamos."
-          />
+        {sinCreditos && (
+          <p className="text-sm">
+            Ya no tienes créditos.{" "}
+            <Link href="/cuenta" className="font-medium underline">
+              Compra un paquete
+            </Link>{" "}
+            para seguir generando memorias.
+          </p>
         )}
       </div>
-
-      {snapshot && <Memoria snapshot={snapshot} />}
     </div>
   );
 }

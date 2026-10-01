@@ -18,11 +18,14 @@ Normas: NTC-CDMX 2023 (Cimentaciones), ASTM D2487. Unidades de obra (t/m², t/m�
   - `soils/`: SUCS, Terzaghi, asentamientos y el estudio completo (`study.ts`).
   - `units.ts`: conversión entre SI y unidades de obra.
   - `suite.ts`: catálogo de paquetes y estudios que muestra la página inicial.
-- `src/app/`: páginas. `/` (paquetes), `/civil` (estudios del paquete civil), `/civil/suelos` (estudio y memoria).
-- `src/lib/credits.ts`: créditos de cálculo. **Provisional**: se guardan en el navegador (5 gratis) y no hay cobro.
+- `src/app/`: páginas. `/` (paquetes), `/civil` (estudios del paquete civil), `/civil/suelos` (estudio), `/entrar`, `/cuenta` (créditos y memorias), `/memorias/[folio]`, `/firma` (panel del ingeniero).
+- `src/lib/servidor/`: cuentas, créditos, memorias y pagos (solo servidor). Ver [docs/cuentas-pagos-y-firma.md](docs/cuentas-pagos-y-firma.md).
+- `supabase/migrations/`: tablas y funciones de Supabase.
 - `src/lib/whatsapp/` y `src/lib/ventas/`: conexión con el Hub de WhatsApp y el agente de ventas. Ver [docs/whatsapp-y-ventas.md](docs/whatsapp-y-ventas.md).
 
 ## Desarrollo
+
+Sin variables de entorno la app corre en **modo demostración**: entras con cualquier correo y el código `123456`, los pagos se simulan y `firmante@demo.mx` abre el panel de firma.
 
 ```bash
 npm install
