@@ -20,6 +20,7 @@ Normas: NTC-CDMX 2023 (Cimentaciones), ASTM D2487. Unidades de obra (t/m², t/m�
   - `suite.ts`: catálogo de paquetes y estudios que muestra la página inicial.
 - `src/app/`: páginas. `/` (paquetes), `/civil` (estudios del paquete civil), `/civil/suelos` (estudio y memoria).
 - `src/lib/credits.ts`: créditos de cálculo. **Provisional**: se guardan en el navegador (5 gratis) y no hay cobro.
+- `src/lib/whatsapp/` y `src/lib/ventas/`: conexión con el Hub de WhatsApp y el agente de ventas. Ver [docs/whatsapp-y-ventas.md](docs/whatsapp-y-ventas.md).
 
 ## Desarrollo
 

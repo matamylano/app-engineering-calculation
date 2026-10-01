@@ -6,6 +6,7 @@ import { runSoilStudy, type SoilStudyInput, type SoilStudyResult } from "@/calc/
 import { fromKPa, toKNm3, toKPa, UNIT_SYSTEMS, type UnitSystem } from "@/calc/units";
 import { useCredits } from "@/lib/credits";
 import { Check, ErrorText, Field, fmt, num, optNum, ResultRow, Section, Select } from "@/components/form";
+import ContactoVentas from "@/components/ContactoVentas";
 import Memoria, { type MemoriaSnapshot, type ProjectInfo } from "./Memoria";
 
 const SHAPES: { value: FootingShape; label: string }[] = [
@@ -305,6 +306,22 @@ export default function SoilStudy() {
           </span>
         </div>
         {notice && <ErrorText>{notice}</ErrorText>}
+        {!snapshot && credits === 0 && (
+          <ContactoVentas
+            interes="creditos"
+            estudio="suelos"
+            titulo="Consigue más créditos"
+            descripcion="Déjanos tu WhatsApp y te mandamos los paquetes de créditos disponibles."
+          />
+        )}
+        {snapshot && (
+          <ContactoVentas
+            interes="firma"
+            estudio="suelos"
+            titulo="¿No tienes quién firme el estudio?"
+            descripcion="Un ingeniero con registro puede revisarlo y firmarlo por ti. Déjanos tu WhatsApp y te contactamos."
+          />
+        )}
       </div>
 
       {snapshot && <Memoria snapshot={snapshot} />}
