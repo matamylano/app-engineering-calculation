@@ -102,8 +102,8 @@ export default async function Page({ params, searchParams }: PageProps<"/memoria
           <div className="flex flex-wrap items-center gap-3">
             <BotonImprimir />
             <span className="text-sm text-zinc-500">
-              Aprobada por {m.firma.nombre}, cédula {m.firma.cedula}. La hoja final lleva sus datos y la huella de
-              aprobación.
+              Aprobada por {m.firma.nombre}, cédula {m.firma.cedula}. La hoja final lleva{" "}
+              {m.firma.firmaImagen ? "su firma, su sello" : "sus datos"} y la huella de aprobación.
             </span>
           </div>
         )}

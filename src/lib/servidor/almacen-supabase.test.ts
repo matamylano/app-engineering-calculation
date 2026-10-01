@@ -57,3 +57,17 @@ describe("AlmacenSupabase", () => {
     await expect(new AlmacenSupabase("https://x", "k", f).saldo("u")).rejects.toThrow(/500/);
   });
 });
+
+describe("AlmacenSupabase · firmantes", () => {
+  it("guarda el perfil con upsert y lo lee", async () => {
+    const f = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response("", { status: 201 }))
+      .mockResolvedValueOnce(res([{ nombre: "Ing", cedula: "1", registro: "R", firma_imagen: "data:image/png;base64,AA", sello_imagen: null }]));
+    const alm = new AlmacenSupabase("https://x.supabase.co", "srv", f);
+    await alm.guardarPerfilFirmante("ing-1", { nombre: "Ing", cedula: "1", registro: "R", firmaImagen: "data:image/png;base64,AA" });
+    expect(f.mock.calls[0][0]).toBe("https://x.supabase.co/rest/v1/firmantes?on_conflict=id");
+    expect(f.mock.calls[0][1]?.headers).toMatchObject({ prefer: "resolution=merge-duplicates" });
+    expect(await alm.perfilFirmante("ing-1")).toEqual({ nombre: "Ing", cedula: "1", registro: "R", firmaImagen: "data:image/png;base64,AA", selloImagen: undefined });
+  });
+});

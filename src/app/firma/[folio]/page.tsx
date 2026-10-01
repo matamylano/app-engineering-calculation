@@ -17,7 +17,11 @@ export default async function Page({ params }: PageProps<"/firma/[folio]">) {
   const sesion = await sesionActual();
   if (!sesion) redirect(`/entrar?siguiente=${encodeURIComponent(`/firma/${folio}`)}`);
   if (!sesion.firmante) notFound();
-  const m = FOLIO_VALIDO.test(folio) ? await almacen().memoria(folio) : null;
+  const alm = almacen();
+  const [m, perfil] = await Promise.all([
+    FOLIO_VALIDO.test(folio) ? alm.memoria(folio) : null,
+    alm.perfilFirmante(sesion.id),
+  ]);
   if (!m) notFound();
 
   return (
@@ -31,7 +35,7 @@ export default async function Page({ params }: PageProps<"/firma/[folio]">) {
           <EstadoPill estado={m.estado} />
         </div>
         {m.estado === "en_revision" ? (
-          <Revision folio={m.folio} />
+          <Revision folio={m.folio} datos={perfil ?? undefined} />
         ) : (
           <p className="text-sm text-zinc-600 dark:text-zinc-400">Esta memoria no está en revisión.</p>
         )}

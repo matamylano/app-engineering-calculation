@@ -4,9 +4,10 @@ import { useActionState } from "react";
 import { accionAprobar, accionRechazar, type EstadoForm } from "@/app/acciones";
 import { inputClass } from "@/components/form";
 import { Boton, Mensajes } from "@/components/ui";
+import type { DatosFirmante } from "@/lib/servidor/tipos";
 
 /** Aprobar (congela la memoria con los datos del ingeniero) o pedir cambios. */
-export default function Revision({ folio }: { folio: string }) {
+export default function Revision({ folio, datos }: { folio: string; datos?: DatosFirmante }) {
   const [aprobacion, aprobar, aprobando] = useActionState<EstadoForm, FormData>(accionAprobar, {});
   const [rechazo, rechazar, rechazando] = useActionState<EstadoForm, FormData>(accionRechazar, {});
 
@@ -24,7 +25,7 @@ export default function Revision({ folio }: { folio: string }) {
         ).map(([name, label]) => (
           <label key={name} className="grid gap-1 text-sm">
             <span className="font-medium">{label}</span>
-            <input name={name} required autoComplete="on" className={inputClass} />
+            <input name={name} required defaultValue={datos?.[name]} className={inputClass} />
           </label>
         ))}
         <label className="flex items-start gap-2 text-sm">

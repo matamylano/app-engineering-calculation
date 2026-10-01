@@ -1,5 +1,5 @@
 import { FREE_CREDITS } from "@/lib/creditos";
-import type { Almacen, EstadoMemoria, Pago, RegistroMemoria, Usuario } from "./tipos";
+import type { Almacen, EstadoMemoria, Pago, PerfilFirmante, RegistroMemoria, Usuario } from "./tipos";
 
 /** Fila de la tabla `memorias` (ver supabase/migrations). */
 interface FilaMemoria {
@@ -152,4 +152,45 @@ export class AlmacenSupabase implements Almacen {
     );
     return ((await res.json()) as unknown[]).length === 1;
   }
+
+  async perfilFirmante(id: string) {
+    const res = await this.pedir(`firmantes?id=eq.${encodeURIComponent(id)}&select=*`);
+    const f = ((await res.json()) as FilaFirmante[])[0];
+    return f
+      ? {
+          nombre: f.nombre,
+          cedula: f.cedula,
+          registro: f.registro,
+          firmaImagen: f.firma_imagen ?? undefined,
+          selloImagen: f.sello_imagen ?? undefined,
+        }
+      : null;
+  }
+
+  async guardarPerfilFirmante(id: string, p: PerfilFirmante) {
+    await this.pedir(
+      "firmantes?on_conflict=id",
+      {
+        method: "POST",
+        body: JSON.stringify({
+          id,
+          nombre: p.nombre,
+          cedula: p.cedula,
+          registro: p.registro,
+          firma_imagen: p.firmaImagen ?? null,
+          sello_imagen: p.selloImagen ?? null,
+          actualizado_en: new Date().toISOString(),
+        }),
+      },
+      "resolution=merge-duplicates",
+    );
+  }
+}
+
+interface FilaFirmante {
+  nombre: string;
+  cedula: string;
+  registro: string;
+  firma_imagen: string | null;
+  sello_imagen: string | null;
 }

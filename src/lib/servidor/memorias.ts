@@ -2,7 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 import { runSoilStudy } from "@/calc/soils/study";
 import { entradaDesdeFormulario, unitsOf, type FormularioSuelos } from "@/lib/estudios/suelos";
 import { normalizarTelefono } from "@/lib/ventas/agentsales";
-import type { Almacen, DatosFirmante, DatosMemoria, RegistroMemoria, Usuario } from "./tipos";
+import type { Almacen, DatosFirmante, DatosMemoria, FirmaMemoria, RegistroMemoria, Usuario } from "./tipos";
 
 /**
  * Reglas de las memorias: generar (gasta un crédito), corregir, mandar a
@@ -131,7 +131,7 @@ export function jsonEstable(x: unknown): string {
   return JSON.stringify(x);
 }
 
-export function huellaMemoria(m: RegistroMemoria, firmante: DatosFirmante & { firmanteId: string; aprobadaEn: string }) {
+export function huellaMemoria(m: RegistroMemoria, firmante: Omit<FirmaMemoria, "huella">) {
   const contenido = { folio: m.folio, version: m.version, estudio: m.estudio, datos: m.datos, firmante };
   return createHash("sha256").update(jsonEstable(contenido)).digest("hex");
 }
@@ -158,10 +158,14 @@ export async function aprobarMemoria(
   if (!m) return falla("No encontramos esa memoria.");
   if (m.estado !== "en_revision") return falla("Esa memoria no está en revisión.");
   const versionFinal = m.version + 1;
+  // La firma y el sello guardados en su perfil se copian a la memoria congelada.
+  const perfil = await alm.perfilFirmante(firmante.id);
   const base = {
     nombre: datos.nombre.trim(),
     cedula: datos.cedula.trim(),
     registro: datos.registro.trim(),
+    firmaImagen: perfil?.firmaImagen,
+    selloImagen: perfil?.selloImagen,
     firmanteId: firmante.id,
     aprobadaEn: ahora.toISOString(),
   };

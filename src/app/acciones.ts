@@ -14,6 +14,7 @@ import {
   rechazarMemoria,
   reenviarARevision,
 } from "@/lib/servidor/memorias";
+import { guardarPerfil } from "@/lib/servidor/firmante";
 import { aplicarPago, iniciarCompra, type Compra } from "@/lib/servidor/pagos";
 import { abrirSesion, cerrarSesion, sesionActual } from "@/lib/servidor/sesion";
 
@@ -153,12 +154,12 @@ export async function accionAprobar(_: EstadoForm, fd: FormData): Promise<Estado
   const sesion = await sesionActual();
   if (!sesion?.firmante) return { error: "Solo el ingeniero firmante puede aprobar." };
   if (fd.get("confirmo") !== "si") return { error: "Confirma que revisaste la memoria completa." };
-  const r = await aprobarMemoria(almacen(), sesion, texto(fd, "folio"), {
-    nombre: texto(fd, "nombre"),
-    cedula: texto(fd, "cedula"),
-    registro: texto(fd, "registro"),
-  });
+  const alm = almacen();
+  const datos = { nombre: texto(fd, "nombre"), cedula: texto(fd, "cedula"), registro: texto(fd, "registro") };
+  const r = await aprobarMemoria(alm, sesion, texto(fd, "folio"), datos);
   if (!r.ok) return { error: r.error };
+  // Recuerda sus datos para la siguiente; conserva su firma y sello.
+  await guardarPerfil(alm, sesion, datos);
   await avisarResultadoRevision(r.valor);
   revalidatePath("/firma");
   redirect(`/firma?aprobada=${r.valor.folio}`);
@@ -172,4 +173,26 @@ export async function accionRechazar(_: EstadoForm, fd: FormData): Promise<Estad
   await avisarResultadoRevision(r.valor);
   revalidatePath("/firma");
   redirect(`/firma?rechazada=${r.valor.folio}`);
+}
+
+async function bytes(fd: FormData, k: string) {
+  const v = fd.get(k);
+  return v instanceof File && v.size > 0 ? new Uint8Array(await v.arrayBuffer()) : undefined;
+}
+
+export async function accionPerfilFirmante(_: EstadoForm, fd: FormData): Promise<EstadoForm> {
+  const sesion = await sesionActual();
+  if (!sesion?.firmante) return { error: "Solo el ingeniero firmante puede cambiar su perfil." };
+  const r = await guardarPerfil(almacen(), sesion, {
+    nombre: texto(fd, "nombre"),
+    cedula: texto(fd, "cedula"),
+    registro: texto(fd, "registro"),
+    firma: await bytes(fd, "firma"),
+    sello: await bytes(fd, "sello"),
+    quitarFirma: fd.get("quitarFirma") === "si",
+    quitarSello: fd.get("quitarSello") === "si",
+  });
+  if (!r.ok) return { error: r.error };
+  revalidatePath("/firma/perfil");
+  return { aviso: "Guardamos tu perfil. Tu firma y sello se pondrán en las memorias que apruebes." };
 }

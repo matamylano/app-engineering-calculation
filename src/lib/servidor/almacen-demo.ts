@@ -1,5 +1,5 @@
 import { FREE_CREDITS } from "@/lib/creditos";
-import type { Almacen, EstadoMemoria, Pago, RegistroMemoria, Usuario } from "./tipos";
+import type { Almacen, EstadoMemoria, Pago, PerfilFirmante, RegistroMemoria, Usuario } from "./tipos";
 
 interface Movimiento {
   usuarioId: string;
@@ -20,6 +20,7 @@ export class AlmacenDemo implements Almacen {
   private movimientos: Movimiento[] = [];
   private memorias = new Map<string, RegistroMemoria>();
   private pagos = new Map<string, Pago>();
+  private firmantes = new Map<string, PerfilFirmante>();
 
   async asegurarUsuario(u: Usuario) {
     if (this.usuarios.has(u.id)) return;
@@ -74,5 +75,14 @@ export class AlmacenDemo implements Almacen {
     if (this.pagos.has(p.id)) return false;
     this.pagos.set(p.id, { ...p });
     return true;
+  }
+
+  async perfilFirmante(id: string) {
+    const p = this.firmantes.get(id);
+    return p ? { ...p } : null;
+  }
+
+  async guardarPerfilFirmante(id: string, p: PerfilFirmante) {
+    this.firmantes.set(id, { ...p });
   }
 }

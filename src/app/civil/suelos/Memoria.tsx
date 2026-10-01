@@ -209,11 +209,22 @@ export default function Memoria({ snapshot }: { snapshot: MemoriaSnapshot }) {
             <p className="mt-2">
               <b>Registro:</b> {blank(responsable.registro)}
             </p>
-            <div className="mt-16 border-t border-black pt-1 text-center">Firma</div>
+            {firma?.firmaImagen ? (
+              // eslint-disable-next-line @next/next/no-img-element -- data URL congelada en la memoria
+              <img src={firma.firmaImagen} alt="Firma" className="mx-auto mt-4 h-16 object-contain" />
+            ) : (
+              <div className="mt-16" />
+            )}
+            <div className="border-t border-black pt-1 text-center">Firma</div>
           </div>
-          <div className="flex h-40 items-center justify-center border border-dashed border-zinc-400 text-sm text-zinc-500">
-            Sello
-          </div>
+          {firma?.selloImagen ? (
+            // eslint-disable-next-line @next/next/no-img-element -- data URL congelada en la memoria
+            <img src={firma.selloImagen} alt="Sello" className="mx-auto h-40 object-contain" />
+          ) : (
+            <div className="flex h-40 items-center justify-center border border-dashed border-zinc-400 text-sm text-zinc-500">
+              Sello
+            </div>
+          )}
         </div>
         {firma && (
           <p className="mt-6 text-xs">
@@ -223,8 +234,10 @@ export default function Memoria({ snapshot }: { snapshot: MemoriaSnapshot }) {
           </p>
         )}
         <p className="mt-8 text-xs">
-          Folio {folio}. Este documento no tiene validez sin la firma autógrafa del ingeniero responsable, quien
-          asume la responsabilidad técnica del estudio.
+          Folio {folio}.{" "}
+          {firma?.firmaImagen
+            ? "El ingeniero responsable revisó y aprobó este estudio y asume su responsabilidad técnica. La huella permite comprobar que la memoria no cambió después de la aprobación."
+            : "Este documento no tiene validez sin la firma autógrafa del ingeniero responsable, quien asume la responsabilidad técnica del estudio."}
         </p>
       </section>
     </article>

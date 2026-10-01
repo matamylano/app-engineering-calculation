@@ -19,7 +19,15 @@ export interface DatosFirmante {
   registro: string;
 }
 
-export interface FirmaMemoria extends DatosFirmante {
+/** Datos que el ingeniero guarda una vez para aprobar más rápido. */
+export interface PerfilFirmante extends DatosFirmante {
+  /** Imagen de su firma como data URL (PNG o JPEG). */
+  firmaImagen?: string;
+  /** Imagen de su sello como data URL (PNG o JPEG). */
+  selloImagen?: string;
+}
+
+export interface FirmaMemoria extends PerfilFirmante {
   firmanteId: string;
   aprobadaEn: string;
   /** SHA-256 de la memoria congelada (folio, versión, datos y firmante). */
@@ -77,4 +85,6 @@ export interface Almacen {
   memoriasPorEstado(estado: EstadoMemoria): Promise<RegistroMemoria[]>;
   /** Registra un pago. Devuelve false si ya estaba registrado. */
   registrarPago(p: Pago): Promise<boolean>;
+  perfilFirmante(id: string): Promise<PerfilFirmante | null>;
+  guardarPerfilFirmante(id: string, p: PerfilFirmante): Promise<void>;
 }
