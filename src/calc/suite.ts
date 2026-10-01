@@ -62,8 +62,16 @@ export const PACKAGES: Package[] = [
         enValidacion: true,
       },
       {
+        slug: "losa",
+        title: "Losa maciza en una dirección",
+        description: "Acero por metro, temperatura, cortante y espesor mínimo.",
+        status: "disponible",
+        href: "/civil/losa",
+        enValidacion: true,
+      },
+      {
         slug: "estructuras",
-        title: "Losa y columna de concreto",
+        title: "Columna y losa en dos direcciones",
         description: "Diseño de cada elemento con su armado.",
         status: "proximamente",
       },

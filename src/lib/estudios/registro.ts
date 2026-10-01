@@ -3,12 +3,14 @@
  * y su componente de memoria, y una entrada aquí.
  */
 import { bajadaDeCargas } from "@/calc/cargas/bajada";
+import { disenarLosa } from "@/calc/concreto/losa";
 import { disenarViga, problemasViga } from "@/calc/concreto/viga";
 import { disenarZapata } from "@/calc/concreto/zapata";
 import { runSoilStudy } from "@/calc/soils/study";
-import type { DatosCargas, DatosMemoria, DatosSuelos, DatosViga, DatosZapata, Estudio } from "@/lib/servidor/tipos";
+import type { DatosCargas, DatosLosa, DatosMemoria, DatosSuelos, DatosViga, DatosZapata, Estudio } from "@/lib/servidor/tipos";
 import { entradaCargas, leerFormularioCargas } from "./cargas";
 import { entradaDesdeFormulario, leerFormulario, unitsOf } from "./suelos";
+import { entradaLosa, leerFormularioLosa } from "./losa";
 import { entradaViga, leerFormularioViga } from "./viga";
 import { entradaZapata, leerFormularioZapata } from "./zapata";
 
@@ -29,6 +31,7 @@ export const ESTUDIOS: Record<Estudio, InfoEstudio> = {
   cargas: { titulo: "Bajada de cargas", prefijo: "CAR", ruta: "/civil/cargas", enValidacion: true },
   zapata: { titulo: "Zapata aislada", prefijo: "ZAP", ruta: "/civil/zapata", enValidacion: true },
   viga: { titulo: "Viga de concreto", prefijo: "VIG", ruta: "/civil/viga", enValidacion: true },
+  losa: { titulo: "Losa maciza en una dirección", prefijo: "LOS", ruta: "/civil/losa", enValidacion: true },
 };
 
 export const esEstudio = (x: unknown): x is Estudio => typeof x === "string" && x in ESTUDIOS;
@@ -87,11 +90,25 @@ function calcularViga(raw: unknown): Calculo<DatosViga> {
   }
 }
 
+function calcularLosa(raw: unknown): Calculo<DatosLosa> {
+  const formulario = leerFormularioLosa(raw);
+  if (!formulario) return { ok: false, error: "Los datos del formulario no son válidos." };
+  const entrada = entradaLosa(formulario);
+  try {
+    const resultado = disenarLosa(entrada);
+    if (!resultado.cumple) return { ok: false, error: "La losa no pasa por cortante: aumenta el espesor." };
+    return { ok: true, valor: { formulario, proyecto: formulario.project, entrada, resultado } };
+  } catch (e) {
+    return { ok: false, error: `Corrige los datos: ${errorDe(e)}` };
+  }
+}
+
 const CALCULOS: Record<Estudio, (raw: unknown) => Calculo<DatosMemoria>> = {
   suelos: calcularSuelos,
   cargas: calcularCargas,
   zapata: calcularZapata,
   viga: calcularViga,
+  losa: calcularLosa,
 };
 
 /** Valida y recalcula en el servidor el formulario de un estudio. */

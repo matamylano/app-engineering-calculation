@@ -23,6 +23,7 @@ export const FIRMA_CENTAVOS = {
   cargas: 150_000,
   zapata: 150_000,
   viga: 150_000,
+  losa: 150_000,
 } as const satisfies Record<Estudio, number>;
 
 export const FIRMA_SUELOS_CENTAVOS = FIRMA_CENTAVOS.suelos;
