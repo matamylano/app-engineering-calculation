@@ -1,0 +1,62 @@
+# Suite de Ingeniería
+
+Suite web de estudios de ingeniería con memoria de cálculo lista para firma. Hecha con Next.js y TypeScript, lista para desplegar en Vercel.
+
+## Gráficas
+
+Cada estudio dibuja sus gráficas en pantalla y las agrega a la memoria como anexo: diagramas de momento y cortante (viga y losa), diagrama de interacción (columna), presión contra lado (zapata), capacidad admisible contra ancho y términos de Terzaghi (suelos), cargas por elemento, curva de Hunter, prueba de bombeo en escala semilogarítmica, capacidad de tubería contra gasto pluvial y volumen de fosa contra habitantes. Se describen en `src/lib/graficas/` (sin dibujo, con pruebas) y se pintan con `src/components/graficas/Grafica.tsx` en SVG.
+
+## Paquetes
+
+| Paquete | Estudio | Estado |
+| --- | --- | --- |
+| Ingeniería civil | Mecánica de suelos: clasificación SUCS, capacidad de carga (Terzaghi, con nivel freático), asentamientos inmediatos y por consolidación | Disponible |
+| Ingeniería civil | Bajada de cargas: cargas por nivel (NTC Criterios y Acciones), carga por columna o muro y tamaño de zapata | Disponible |
+| Ingeniería civil | Zapata aislada (NTC Concreto): tamaño, penetración, cortante como viga ancha, flexión y armado | Disponible |
+| Ingeniería civil | Viga de concreto: momentos y cortante por tipo de apoyo, acero arriba y abajo, estribos y peralte mínimo | Disponible |
+| Ingeniería civil | Losa maciza en una dirección: acero por metro arriba y abajo, temperatura, cortante y espesor mínimo | Disponible |
+| Ingeniería civil | Columna de concreto: flexocompresión por compatibilidad de deformaciones, excentricidad mínima, esbeltez, acero longitudinal y estribos | Disponible |
+| Ingeniería civil | Instalación hidráulica y sanitaria: demanda, cisterna y tinaco, gasto de Hunter, diámetros con Hazen-Williams, bomba y drenaje | Disponible |
+| Ingeniería civil | Pozo de agua: prueba de bombeo (Cooper-Jacob), abatimiento de diseño, ademe, rejilla y bomba sumergible | Disponible |
+| Ingeniería civil | Drenaje pluvial: método racional, tubería con Manning y pozos de absorción | Disponible |
+| Ingeniería civil | Fosa séptica: volumen (NBR 7229), medidas, biodigestor equivalente y campo de infiltración | Disponible |
+| Ingeniería civil | Losa en dos direcciones | Próximamente |
+| Paquetes 2 y 3 | Por definir | Próximamente |
+
+Normas: NTC-CDMX 2023 (Cimentaciones, Criterios y Acciones, Concreto), ASTM D2487. Mientras el ingeniero responsable no valide las fórmulas de un estudio, `enValidacion` en `src/lib/estudios/registro.ts` y `src/calc/suite.ts` muestra el aviso «En validación». Unidades de obra (t/m², t/m³, kg/cm²) o SI; el motor calcula en SI.
+
+## Estructura
+
+- `src/calc/`: motor de cálculo. Funciones puras, sin interfaz, cada una con pruebas (`*.test.ts`).
+  - `soils/`: SUCS, Terzaghi, asentamientos y el estudio completo (`study.ts`).
+  - `cargas/`: bajada de cargas (en kg/m² y t, como se usa en obra).
+  - `hidrosanitaria/`: instalación de una casa; `tablas.ts` junta unidades mueble, curva de Hunter, tubos y criterios.
+  - `pozos/`: pozo de agua; `tablas.ts` junta ademes, velocidad de entrada, columnas y eficiencia.
+  - `drenaje/`: drenaje pluvial y fosa séptica; `tablas.ts` junta coeficientes, diámetros y las tablas de la NBR 7229.
+  - `concreto/`: diseño de elementos de concreto reforzado; `ntc.ts` junta las constantes de las NTC de Concreto para que el ingeniero responsable las revise.
+  - `units.ts`: conversión entre SI y unidades de obra.
+  - `suite.ts`: catálogo de paquetes y estudios que muestra la página inicial.
+- `src/app/`: páginas. `/` (paquetes), `/civil` (estudios del paquete civil), `/civil/suelos` (estudio), `/entrar`, `/cuenta` (créditos y memorias), `/memorias/[folio]`, `/firma` (panel del ingeniero).
+- `src/lib/estudios/`: formulario de cada estudio y su registro (`registro.ts`: prefijo de folio, ruta y cálculo en el servidor).
+- `src/lib/servidor/`: cuentas, créditos, memorias y pagos (solo servidor). Ver [docs/cuentas-pagos-y-firma.md](docs/cuentas-pagos-y-firma.md).
+- `supabase/migrations/`: tablas y funciones de Supabase.
+- `src/lib/whatsapp/` y `src/lib/ventas/`: conexión con el Hub de WhatsApp y el agente de ventas. Ver [docs/whatsapp-y-ventas.md](docs/whatsapp-y-ventas.md).
+
+## Desarrollo
+
+Sin variables de entorno la app corre en **modo demostración**: entras con cualquier correo y el código `123456`, los pagos se simulan y `firmante@demo.mx` abre el panel de firma.
+
+```bash
+npm install
+npm run dev        # http://localhost:3000
+npm test
+npm run lint
+npm run typecheck
+npm run build
+```
+
+Para probarla en Docker: `docker compose up --build` y abre http://localhost:3000. Detalles en [docs/docker.md](docs/docker.md). Las variables están en `.env.example`.
+
+## Validación
+
+Ningún estudio se publica hasta que el ingeniero responsable reproduzca sus casos de validación. Nc y Nq usan las expresiones cerradas de Terzaghi; Nγ se interpola en la tabla de Kumbhojkar (1993).
