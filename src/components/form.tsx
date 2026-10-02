@@ -29,7 +29,7 @@ export function Field({ label, unit, value, onChange, placeholder, type = "numbe
         {label}
         {unit && <span className="sr-only"> ({unit})</span>}
       </span>
-      <span className="relative">
+      <span className="relative block">
         <input
           className={`${inputClass} ${unit ? "pr-16" : ""}`}
           type={type}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { disenarViga, type EntradaViga } from "./viga";
+import { anclajeGancho, disenarViga, partidasViga, problemasViga, type EntradaViga } from "./viga";
 
 const base: EntradaViga = {
   claro: 5,
@@ -65,5 +65,34 @@ describe("disenarViga", () => {
     expect(() => disenarViga({ ...base, claro: 10, muerta: 5 })).toThrow(/no resiste/);
     const r = disenarViga({ ...base, b: 15, h: 60, claro: 2, muerta: 40, viva: 20, varilla: 8 });
     expect(r.cortante.cumple).toBe(false);
+  });
+
+  it("flechas: advertencia con peralte mínimo, problema sin él", () => {
+    // 25 × 40, L = 5 m: total 3.50 cm > L/240 + 0.5 = 2.58 cm, pero h = 40 ≥ L/16 = 31.25: solo advierte.
+    const r = disenarViga({ ...base, b: 25 });
+    expect(r.deflexion?.total).toBeCloseTo(3.5, 1);
+    expect(r.deflexion?.cumple).toBe(false);
+    expect(r.flechaExcedida).toBe(false);
+    expect(r.cumple).toBe(true);
+    // L = 6.5 m con h = 40 < 40.6: la flecha excedida impide la memoria.
+    const larga = disenarViga({ ...base, b: 30, claro: 6.5, muerta: 1, viva: 0.3 });
+    expect(larga.flechaExcedida).toBe(true);
+    expect(larga.cumple).toBe(false);
+    expect(problemasViga(larga).join()).toMatch(/flecha/);
+    // Sin carga viva sostenida la flecha diferida baja.
+    const sinViva = disenarViga({ ...base, b: 25, vivaSostenida: 0 });
+    expect(sinViva.deflexion!.diferida).toBeLessThan(r.deflexion!.diferida);
+  });
+
+  it("cuantifica concreto, acero, estribos y cimbra", () => {
+    // Gancho #5: 0.076·1.588·4200/√250 = 32.06 + 12·1.588 = 51.11 cm por extremo.
+    expect(anclajeGancho(5, 4200, 250)).toBeCloseTo(51.11, 2);
+    const e = { ...base, b: 25 };
+    const p = partidasViga(e, disenarViga(e));
+    // 0.25·0.40·5 = 0.5 m³; 2 #5 × 6.022 m × 1.562 kg/m = 18.82 kg; 4 #5 = 37.63 kg;
+    // estribos @ 17.5: 30 piezas × (2·19 + 2·34 + 2·7.5 = 121 cm) × 0.557 = 20.23 kg;
+    // cimbra 5 × (0.25 + 2·0.40) = 5.25 m².
+    expect(p.map((x) => Number(x.cantidad.toFixed(2)))).toEqual([0.5, 18.82, 37.63, 20.23, 5.25]);
+    expect(p[3].concepto).toMatch(/30 piezas/);
   });
 });

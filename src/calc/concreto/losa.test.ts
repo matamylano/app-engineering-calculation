@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { disenarLosa, type EntradaLosa } from "./losa";
+import { disenarLosa, partidasLosa, problemasLosa, type EntradaLosa } from "./losa";
 
 const base: EntradaLosa = {
   claro: 3,
@@ -40,8 +40,12 @@ describe("disenarLosa", () => {
     // Vu = 8.44·150 − 8.44·7.52 = 1.20 t; VcR = 0.375·√250·100·7.52 = 4.46 t.
     expect(r.cortante.actuante).toBeCloseTo(1.2025, 3);
     expect(r.cortante.resistente).toBeCloseTo(4.461, 2);
-    expect(r.cumple).toBe(true);
+    expect(r.cortante.cumple).toBe(true);
     expect(r.espesorMinimo).toBe(15);
+    // Con 10 cm (< 15 cm) se calcula la flecha: Ie = 4 300 cm⁴, δi = 0.69 cm, total 1.81 > 1.75 cm.
+    expect(r.deflexion!.total).toBeCloseTo(1.81, 1);
+    expect(r.flechaExcedida).toBe(true);
+    expect(r.cumple).toBe(false);
   });
 
   it("sin incrementos no suma los 40 kg/m²", () => {
@@ -56,5 +60,32 @@ describe("disenarLosa", () => {
 
   it("avisa cuando el espesor no alcanza", () => {
     expect(() => disenarLosa({ ...base, claro: 6, muerta: 600, viva: 500 })).toThrow(/espesor/);
+  });
+
+  it("revisa la flecha de la franja", () => {
+    // h = 12: CM = 288 + 40 + 150 = 478; w = 6.68 kg/cm; Ma = 6.68·300²/8 = 0.752 t·m < Mag = 0.759 t·m
+    // → Ie = Ig = 14 400 cm⁴; δi = 5·6.68·300⁴/(384·221 359·14 400) = 0.221 cm;
+    // sostenida (478 + 0.42·190)/668 → 0.186 cm × 2 = 0.371; total 0.59 < 3/240·100 + 0.5 = 1.75 cm.
+    const r = disenarLosa({ ...base, h: 12, vivaSostenida: 0.42 });
+    expect(r.deflexion!.ie).toBe(14_400);
+    expect(r.deflexion!.inmediata).toBeCloseTo(0.221, 3);
+    expect(r.deflexion!.total).toBeCloseTo(0.592, 2);
+    expect(r.deflexion!.limite).toBeCloseTo(1.75, 6);
+    expect(r.cumple).toBe(true);
+    // Claro de 5 m con 12 cm (mínimo 25 cm) y cargas altas: no pasa por flecha.
+    const larga = disenarLosa({ ...base, claro: 5, h: 12, muerta: 300, viva: 350, varilla: 4 });
+    expect(larga.flechaExcedida).toBe(true);
+    expect(larga.cumple).toBe(false);
+    expect(problemasLosa(larga).join()).toMatch(/flecha/);
+  });
+
+  it("cuantifica un tablero", () => {
+    const e = { ...base, h: 12 };
+    const p = partidasLosa(e, disenarLosa(e), 6);
+    // 3 × 6 × 0.12 = 2.16 m³; gancho #3 = 19.24 + 11.44 = 30.68 cm;
+    // abajo @ 22.5: 28 × 3.614 m × 0.557 = 56.39 kg; bastones @ 27.5: 2 × 23 × (0.75 + 0.307) × 0.557 = 27.09 kg;
+    // temperatura @ 40: 9 × 6 m × 0.557 = 30.10 kg; cimbra 18 m².
+    expect(p.map((x) => Number(x.cantidad.toFixed(2)))).toEqual([2.16, 56.39, 27.09, 30.1, 18]);
+    expect(() => partidasLosa(e, disenarLosa(e), 0)).toThrow(/largo/);
   });
 });

@@ -264,8 +264,9 @@ function GraficaBarras({ e }: { e: EspecBarras }) {
                           x={x + ancho / 2}
                           y={py(v) - 6}
                           textAnchor="middle"
-                          fontSize="11.5"
-                          fill="var(--g-texto)"
+                          fontSize="12.5"
+                          fontWeight="500"
+                          fill="var(--g-tinta)"
                           className="tabular-nums"
                         >
                           {numeroEje(v)}

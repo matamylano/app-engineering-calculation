@@ -6,11 +6,14 @@ import { ErrorText, Field, fmt, inputClass, ResultRow, Section } from "@/compone
 import { Graficas } from "@/components/graficas/Grafica";
 import PieGenerar from "@/components/PieGenerar";
 import { graficasPozo } from "@/lib/graficas/agua";
+import { graficasPozoExtra } from "@/lib/graficas/pozo";
+import { DIAS_ANO, EFICIENCIA_MOTOR, TARIFA_REFERENCIA } from "@/calc/pozos/tablas";
 import { useGuardarMemoria } from "@/components/useGuardarMemoria";
 import { entradaPozo, FORMULARIO_POZO_INICIAL, MAX_LECTURAS, type FormularioPozo, type LecturaForm } from "@/lib/estudios/pozo";
 import type { ProjectInfo } from "@/lib/estudios/proyecto";
 
 const quitar = "text-sm text-zinc-500 hover:text-red-600";
+const pesos = (x: number, d = 0) => `$${fmt(x, d)}`;
 const agregar = "rounded-md border border-dashed border-zinc-400 px-3 py-1.5 text-sm hover:border-zinc-600";
 
 interface Props {
@@ -111,6 +114,32 @@ export default function DisenoPozo({ folio, inicial, creditos }: Props) {
         </div>
       </Section>
 
+      <Section title="3. Energía, costo y concesión">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <Field label="Horas de bombeo al día" unit="h/día" value={f.horasDia} onChange={set("horasDia")} placeholder="Vacío: hasta 24" />
+          <Field label="Días de bombeo al año" unit="días" value={f.diasAno} onChange={set("diasAno")} placeholder={`Vacío: ${DIAS_ANO}`} />
+          <Field
+            label="Eficiencia del motor"
+            unit="%"
+            value={f.eficienciaMotor}
+            onChange={set("eficienciaMotor")}
+            placeholder={`Vacío: ${EFICIENCIA_MOTOR * 100}`}
+          />
+          <Field label="Tarifa eléctrica" unit="$/kWh" value={f.tarifa} onChange={set("tarifa")} placeholder="Vacío: sin costo" />
+          <Field
+            label="Volumen concesionado (título CONAGUA)"
+            unit="m³/año"
+            value={f.volumenConcesionado}
+            onChange={set("volumenConcesionado")}
+            placeholder="Vacío: sin revisión"
+          />
+        </div>
+        <p className="mt-2 text-sm text-zinc-500">
+          La tarifa de ejemplo ({pesos(TARIFA_REFERENCIA, 2)}/kWh) es un promedio aproximado de la tarifa GDMTO de CFE; pon la de tu
+          recibo (la 9-CU de bombeo agrícola es mucho más barata). La energía toma la bomba a su potencia de placa.
+        </p>
+      </Section>
+
       <Section title="Resultados">
         {calculo.ok ? (
           <div className="grid gap-4 lg:grid-cols-2">
@@ -136,6 +165,31 @@ export default function DisenoPozo({ folio, inicial, creditos }: Props) {
                 <ResultRow label="Bomba sumergible" value={`${fmt(calculo.r.potenciaComercial, 1)} HP`} />
               </tbody>
             </table>
+            <table className="w-full text-sm">
+              <tbody>
+                <ResultRow label="Volumen extraído al día" value={`${fmt(calculo.r.extraccion.diario, 0)} m³`} />
+                <ResultRow label="Volumen extraído al año" value={`${fmt(calculo.r.extraccion.anual, 0)} m³`} />
+                {calculo.r.extraccion.uso !== undefined && (
+                  <ResultRow label="Uso del volumen concesionado" value={`${fmt(calculo.r.extraccion.uso * 100, 0)} %`} />
+                )}
+                <ResultRow label="Potencia eléctrica" value={`${fmt(calculo.r.energia.kw)} kW`} />
+              </tbody>
+            </table>
+            <table className="w-full text-sm">
+              <tbody>
+                <ResultRow
+                  label="Energía"
+                  value={`${fmt(calculo.r.energia.kwhDia, 0)} kWh/día · ${fmt(calculo.r.energia.kwhMes, 0)} kWh/mes`}
+                />
+                <ResultRow label="Energía por m³" value={`${fmt(calculo.r.energia.kwhM3, 3)} kWh/m³`} />
+                {calculo.r.energia.costoMes !== undefined && (
+                  <>
+                    <ResultRow label="Costo de energía al mes" value={pesos(calculo.r.energia.costoMes)} />
+                    <ResultRow label="Costo por m³ bombeado" value={pesos(calculo.r.energia.costoM3 ?? 0, 2)} />
+                  </>
+                )}
+              </tbody>
+            </table>
             {calculo.r.advertencias.length > 0 && (
               <p className="text-sm text-amber-700 lg:col-span-2 dark:text-amber-400">Ojo: {calculo.r.advertencias.join("; ")}.</p>
             )}
@@ -150,7 +204,7 @@ export default function DisenoPozo({ folio, inicial, creditos }: Props) {
         )}
       </Section>
 
-      {calculo.ok && <Graficas especs={graficasPozo(entradaPozo(f), calculo.r)} />}
+      {calculo.ok && <Graficas especs={[...graficasPozo(entradaPozo(f), calculo.r), ...graficasPozoExtra(entradaPozo(f), calculo.r)]} />}
 
       <PieGenerar folio={folio} creditos={creditos} pendiente={pendiente} error={aviso ?? error} onGenerar={generar} />
     </div>

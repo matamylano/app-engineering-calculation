@@ -63,3 +63,37 @@ describe("runSoilStudy", () => {
     expect(r.settlement.ok).toBe(false);
   });
 });
+
+describe("revisión del asentamiento admisible y tabla de diseño", () => {
+  it("cumple cuando el total no rebasa el admisible", () => {
+    const r = runSoilStudy({ ...input, settlement: { ...input.settlement, allowable: 1 } });
+    if (!r.settlement.ok) throw new Error(r.settlement.error);
+    expect(r.settlement.value.allowable).toBe(1);
+    expect(r.settlement.value.meetsAllowable).toBe(true);
+    expect(r.problemas).toEqual([]);
+  });
+
+  it("no cumple: avisa sin marcar error", () => {
+    const r = runSoilStudy({ ...input, settlement: { ...input.settlement, allowable: 0.0001 } });
+    expect(r.settlement.ok && r.settlement.value.meetsAllowable).toBe(false);
+    expect(r.problemas?.[0]).toMatch(/rebasa el admisible/);
+  });
+
+  it("sin admisible no revisa (memorias viejas)", () => {
+    const r = runSoilStudy(input);
+    expect(r.settlement.ok && r.settlement.value.meetsAllowable).toBeUndefined();
+  });
+
+  it("rechaza un admisible no positivo", () => {
+    const r = runSoilStudy({ ...input, settlement: { ...input.settlement, allowable: 0 } });
+    expect(r.settlement.ok).toBe(false);
+  });
+
+  it("incluye la tabla de diseño con la qa capturada", () => {
+    const r = runSoilStudy(input);
+    if (!r.bearing.ok || !r.designTable) throw new Error("sin tabla");
+    const i = r.designTable.profundidades.indexOf(1.2);
+    const j = r.designTable.anchos.indexOf(1.5);
+    expect(r.designTable.qa[i][j]).toBeCloseTo(r.bearing.value.allowable, 9);
+  });
+});

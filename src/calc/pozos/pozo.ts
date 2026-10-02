@@ -1,16 +1,21 @@
 /**
  * Pozo de agua: interpretación de la prueba de bombeo con el método de
  * Cooper-Jacob, abatimiento con el gasto de diseño, ademe, longitud de
- * rejilla y bomba sumergible.
+ * rejilla, bomba sumergible, energía y costo del bombeo y volumen de
+ * extracción contra el concesionado.
  */
 import { perdidaHazen } from "@/calc/hidrosanitaria/casa";
 import {
   ADEMES,
   BOMBAS_HP,
+  AVISO_CONCESION,
   C_COLUMNA,
   COLUMNAS,
+  DIAS_ANO,
   EFICIENCIA_BOMBA,
+  EFICIENCIA_MOTOR,
   FACTOR_ACCESORIOS,
+  KW_POR_HP,
   VELOCIDAD_COLUMNA,
   VELOCIDAD_ENTRADA,
 } from "./tablas";
@@ -42,6 +47,43 @@ export interface EntradaPozo {
   cargaDescarga: number;
   /** Área abierta de la rejilla (fracción). */
   aberturaRejilla: number;
+  /** Horas de operación al día; sin dato, las de bombeo continuo hasta 24. */
+  horasDia?: number;
+  /** Días de operación al año; sin dato, 365. */
+  diasAno?: number;
+  /** Eficiencia del motor (fracción); sin dato, EFICIENCIA_MOTOR. */
+  eficienciaMotor?: number;
+  /** Tarifa eléctrica ($/kWh); sin dato, no se calcula el costo. */
+  tarifa?: number;
+  /** Volumen concesionado en el título de CONAGUA (m³/año). */
+  volumenConcesionado?: number;
+}
+
+export interface EnergiaPozo {
+  horasDia: number;
+  diasAno: number;
+  eficienciaMotor: number;
+  /** Potencia eléctrica con la bomba a su potencia de placa (kW). */
+  kw: number;
+  kwhDia: number;
+  kwhMes: number;
+  kwhAno: number;
+  kwhM3: number;
+  /** Solo con tarifa ($/kWh). */
+  tarifa?: number;
+  costoMes?: number;
+  costoAno?: number;
+  costoM3?: number;
+}
+
+export interface ExtraccionPozo {
+  /** m³ */
+  diario: number;
+  mensual: number;
+  anual: number;
+  concesionado?: number;
+  /** anual / concesionado */
+  uso?: number;
 }
 
 export interface ResultadoPozo {
@@ -61,6 +103,9 @@ export interface ResultadoPozo {
   carga: number;
   potencia: number;
   potenciaComercial: number;
+  /** Faltan en memorias anteriores. */
+  energia: EnergiaPozo;
+  extraccion: ExtraccionPozo;
   problemas: string[];
   advertencias: string[];
   cumple: boolean;
@@ -96,6 +141,12 @@ export function disenarPozo(e: EntradaPozo): ResultadoPozo {
   if (!(e.cargaDescarga >= 0)) throw new RangeError("La carga en la descarga no puede ser negativa.");
   revisar(e.aberturaRejilla, "El área abierta de la rejilla", 0, 0.6);
   if (e.radioObservacion !== undefined) revisar(e.radioObservacion, "La distancia al pozo de observación", 0, 5000);
+  if (e.horasDia !== undefined) revisar(e.horasDia, "Las horas de bombeo al día", 0, 24);
+  if (e.diasAno !== undefined) revisar(e.diasAno, "Los días de bombeo al año", 0, 366);
+  if (e.eficienciaMotor !== undefined) revisar(e.eficienciaMotor, "La eficiencia del motor", 0.3, 1);
+  if (e.tarifa !== undefined && !(e.tarifa >= 0 && e.tarifa <= 100))
+    throw new RangeError("La tarifa eléctrica debe estar entre 0 y 100 $/kWh.");
+  if (e.volumenConcesionado !== undefined) revisar(e.volumenConcesionado, "El volumen concesionado", 0, 1e9);
   if (e.lecturas.some((l) => !(l.t > 0) || !(l.s >= 0) || !Number.isFinite(l.t) || !Number.isFinite(l.s)))
     throw new RangeError("Cada lectura necesita un tiempo mayor que 0 y un abatimiento.");
 
@@ -147,6 +198,15 @@ export function disenarPozo(e: EntradaPozo): ResultadoPozo {
   const potenciaComercial = BOMBAS_HP.find((p) => p >= potencia) ?? Infinity;
   if (!Number.isFinite(potenciaComercial)) problemas.push("la bomba pasa de 100 HP; revisa los datos");
 
+  const { energia, extraccion } = energiaYExtraccion(e, Number.isFinite(potenciaComercial) ? potenciaComercial : potencia);
+  if (extraccion.uso !== undefined) {
+    const texto = `la extracción de ${Math.round(extraccion.anual).toLocaleString("es-MX")} m³/año`;
+    const titulo = `${Math.round(extraccion.concesionado!).toLocaleString("es-MX")} m³/año del título de concesión`;
+    if (extraccion.uso > 1) problemas.push(`${texto} pasa de los ${titulo}; baja el gasto, las horas o los días de bombeo`);
+    else if (extraccion.uso > AVISO_CONCESION)
+      advertencias.push(`${texto} usa más del ${Math.round(AVISO_CONCESION * 100)} % de los ${titulo}`);
+  }
+
   return {
     recta,
     transmisividad,
@@ -161,8 +221,52 @@ export function disenarPozo(e: EntradaPozo): ResultadoPozo {
     carga,
     potencia,
     potenciaComercial,
+    energia,
+    extraccion,
     problemas,
     advertencias,
     cumple: problemas.length === 0,
   };
+}
+
+/**
+ * Energía y costo del bombeo y volumen extraído. La potencia eléctrica toma
+ * la bomba a su potencia de placa entre la eficiencia del motor (conservador:
+ * el motor rara vez trabaja a plena carga).
+ */
+export function energiaYExtraccion(e: EntradaPozo, hp: number): { energia: EnergiaPozo; extraccion: ExtraccionPozo } {
+  const horasDia = e.horasDia ?? Math.min(e.horasBombeo, 24);
+  const diasAno = e.diasAno ?? DIAS_ANO;
+  const eficienciaMotor = e.eficienciaMotor ?? EFICIENCIA_MOTOR;
+  const kw = (hp * KW_POR_HP) / eficienciaMotor;
+  const kwhDia = kw * horasDia;
+  const kwhAno = kwhDia * diasAno;
+  const diario = (e.gastoDiseno / 1000) * 3600 * horasDia; // m³
+  const anual = diario * diasAno;
+  const kwhM3 = kwhDia / diario;
+  const energia: EnergiaPozo = { horasDia, diasAno, eficienciaMotor, kw, kwhDia, kwhMes: kwhAno / 12, kwhAno, kwhM3 };
+  if (e.tarifa !== undefined) {
+    energia.tarifa = e.tarifa;
+    energia.costoMes = (kwhAno / 12) * e.tarifa;
+    energia.costoAno = kwhAno * e.tarifa;
+    energia.costoM3 = kwhM3 * e.tarifa;
+  }
+  const extraccion: ExtraccionPozo = { diario, mensual: anual / 12, anual };
+  if (e.volumenConcesionado !== undefined) {
+    extraccion.concesionado = e.volumenConcesionado;
+    extraccion.uso = anual / e.volumenConcesionado;
+  }
+  return { energia, extraccion };
+}
+
+/**
+ * Curva del sistema: carga que pide el pozo para un gasto q (L/s). El
+ * abatimiento crece en proporción al gasto (como en el diseño) y la pérdida
+ * en la columna, con Hazen-Williams; la bomba queda donde se diseñó.
+ */
+export function cargaSistema(e: EntradaPozo, r: ResultadoPozo, q: number): number {
+  const interior = COLUMNAS.find((c) => c.nominal === r.columna.nominal)?.interior ?? COLUMNAS[COLUMNAS.length - 1].interior;
+  const longitud = (r.colocacion + e.longitudDescarga) * (1 + FACTOR_ACCESORIOS);
+  const abatimiento = (r.abatimientoDiseno * q) / e.gastoDiseno;
+  return e.nivelEstatico + abatimiento + (q > 0 ? perdidaHazen(q, interior, longitud, C_COLUMNA) : 0) + e.cargaDescarga;
 }

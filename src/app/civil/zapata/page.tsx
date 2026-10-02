@@ -6,6 +6,12 @@ import { almacen } from "@/lib/servidor/config";
 import { FOLIO_VALIDO } from "@/lib/servidor/memorias";
 import { sesionActual } from "@/lib/servidor/sesion";
 import type { DatosZapata } from "@/lib/servidor/tipos";
+import { prellenar } from "@/lib/estudios/prellenar";
+import {
+  CAMPOS_PRELLENAR_ZAPATA,
+  completarFormularioZapata,
+  FORMULARIO_ZAPATA_INICIAL,
+} from "@/lib/estudios/zapata";
 import DisenoZapata from "./DisenoZapata";
 
 export const metadata: Metadata = { title: "Zapata aislada" };
@@ -13,7 +19,8 @@ export const metadata: Metadata = { title: "Zapata aislada" };
 export default async function Page({
   searchParams,
 }: PageProps<"/civil/zapata">) {
-  const { folio } = await searchParams;
+  const params = await searchParams;
+  const { folio } = params;
   const sesion = await sesionActual();
   const alm = almacen();
   const creditos = sesion ? await alm.saldo(sesion.id) : null;
@@ -35,6 +42,11 @@ export default async function Page({
     editar = { folio, datos: m.datos as DatosZapata };
   }
 
+  // Sin folio, acepta datos por la URL (?carga=…&cargaUltima=…&qa=…&c1=…&c2=…).
+  const inicial = editar
+    ? completarFormularioZapata(editar.datos.formulario)
+    : prellenar(FORMULARIO_ZAPATA_INICIAL, params, CAMPOS_PRELLENAR_ZAPATA);
+
   return (
     <main className="pagina">
       <Link
@@ -47,15 +59,16 @@ export default async function Page({
         Zapata aislada
       </h1>
       <p className="intro mt-3">
-        Zapata cuadrada bajo una columna, de concreto reforzado, según las NTC
-        de Concreto: tamaño por la capacidad del suelo, revisión de penetración
-        y de cortante como viga ancha, y armado por flexión. Toma las cargas de
-        tu bajada de cargas.
+        Zapata cuadrada o rectangular bajo una columna, de concreto reforzado,
+        según las NTC de Concreto: tamaño por la capacidad del suelo (con
+        momento, presiones máxima y mínima), revisión de penetración y de
+        cortante como viga ancha, armado por flexión en las dos direcciones y
+        cuantificación con costo. Toma las cargas de tu bajada de cargas.
       </p>
       <AvisoValidacion estudio="zapata" />
       <DisenoZapata
         folio={editar?.folio}
-        inicial={editar?.datos.formulario}
+        inicial={inicial}
         creditos={creditos}
       />
     </main>

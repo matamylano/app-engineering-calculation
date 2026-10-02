@@ -3,6 +3,7 @@
  * a leer y a calcular para la memoria.
  */
 import type { EntradaPozo } from "@/calc/pozos/pozo";
+import { TARIFA_REFERENCIA } from "@/calc/pozos/tablas";
 import { num, optNum } from "@/components/form";
 import { EMPTY_PROJECT, leerProyecto, type ProjectInfo } from "./proyecto";
 
@@ -34,6 +35,16 @@ export interface FormularioPozo {
   cargaDescarga: string;
   /** % */
   aberturaRejilla: string;
+  /** horas/día; vacío = las de bombeo continuo hasta 24 */
+  horasDia: string;
+  /** días/año; vacío = 365 */
+  diasAno: string;
+  /** %; vacío = 80 % */
+  eficienciaMotor: string;
+  /** $/kWh; vacío = sin costo */
+  tarifa: string;
+  /** m³/año del título de CONAGUA; vacío = sin revisión */
+  volumenConcesionado: string;
 }
 
 export const MAX_LECTURAS = 60;
@@ -63,6 +74,11 @@ export const FORMULARIO_POZO_INICIAL: FormularioPozo = {
   longitudDescarga: "20",
   cargaDescarga: "5",
   aberturaRejilla: "15",
+  horasDia: "",
+  diasAno: "",
+  eficienciaMotor: "",
+  tarifa: String(TARIFA_REFERENCIA),
+  volumenConcesionado: "",
 };
 
 const CAMPOS = [
@@ -77,7 +93,15 @@ const CAMPOS = [
   "longitudDescarga",
   "cargaDescarga",
   "aberturaRejilla",
+  "horasDia",
+  "diasAno",
+  "eficienciaMotor",
+  "tarifa",
+  "volumenConcesionado",
 ] as const;
+
+/** Campo opcional; ausente en memorias anteriores. */
+const opcional = (s: string | undefined) => optNum(s ?? "");
 
 export function entradaPozo(f: FormularioPozo): EntradaPozo {
   return {
@@ -93,6 +117,11 @@ export function entradaPozo(f: FormularioPozo): EntradaPozo {
     longitudDescarga: num(f.longitudDescarga),
     cargaDescarga: num(f.cargaDescarga),
     aberturaRejilla: num(f.aberturaRejilla) / 100,
+    horasDia: opcional(f.horasDia),
+    diasAno: opcional(f.diasAno),
+    eficienciaMotor: f.eficienciaMotor?.trim() ? num(f.eficienciaMotor) / 100 : undefined,
+    tarifa: opcional(f.tarifa),
+    volumenConcesionado: opcional(f.volumenConcesionado),
   };
 }
 

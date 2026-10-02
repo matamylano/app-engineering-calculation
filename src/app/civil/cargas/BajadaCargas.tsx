@@ -6,9 +6,12 @@ import { Graficas } from "@/components/graficas/Grafica";
 import PieGenerar from "@/components/PieGenerar";
 import { graficasCargas } from "@/lib/graficas/suelos-cargas";
 import { bajadaDeCargas, CARGAS_VIVAS, type ResultadoBajada, type Uso } from "@/calc/cargas/bajada";
+import { SISTEMAS_PISO, TIPOS_MURO, type SistemaPiso, type TipoMuro } from "@/calc/cargas/catalogos";
+import { urlPrellenado } from "@/lib/estudios/prellenar";
 import { Check, ErrorText, Field, fmt, inputClass, Section, Select } from "@/components/form";
 import { useGuardarMemoria } from "@/components/useGuardarMemoria";
 import {
+  completarFormularioCargas,
   entradaCargas,
   FORMULARIO_CARGAS_INICIAL,
   MAX_ELEMENTOS,
@@ -25,6 +28,25 @@ const USOS = (Object.keys(CARGAS_VIVAS) as Uso[]).map((u) => ({
   label: `${CARGAS_VIVAS[u].nombre} · Wm ${CARGAS_VIVAS[u].wm}`,
 }));
 
+const SISTEMAS = (Object.keys(SISTEMAS_PISO) as SistemaPiso[]).map((k) => {
+  const d = SISTEMAS_PISO[k];
+  const peso = d.peso ?? (d.espesor ? d.espesor * 24 : undefined);
+  return { value: k, label: peso ? `${d.nombre} · ≈ ${peso} kg/m²` : d.nombre };
+});
+
+const MUROS = (Object.keys(TIPOS_MURO) as TipoMuro[]).map((k) => ({
+  value: k,
+  label: TIPOS_MURO[k].peso ? `${TIPOS_MURO[k].nombre} · ≈ ${TIPOS_MURO[k].peso} kg/m² de muro` : TIPOS_MURO[k].nombre,
+}));
+
+/** Al elegir un sistema de piso se llenan los datos de su peso propio. */
+function cambioSistema(sistema: SistemaPiso): Partial<NivelForm> {
+  const d = SISTEMAS_PISO[sistema];
+  if (d.espesor !== undefined) return { sistema, espesor: String(d.espesor), pesoConcreto: "2.4" };
+  if (d.peso !== undefined) return { sistema, pesoSistema: String(d.peso) };
+  return { sistema };
+}
+
 const quitar = "text-sm text-zinc-500 hover:text-red-600";
 const agregar = "rounded-md border border-dashed border-zinc-400 px-3 py-1.5 text-sm hover:border-zinc-600";
 
@@ -35,9 +57,11 @@ interface Props {
 }
 
 export default function BajadaCargas({ folio, inicial, creditos }: Props) {
-  const [f, setF] = useState<FormularioCargas>(inicial ?? FORMULARIO_CARGAS_INICIAL);
+  const [f, setF] = useState<FormularioCargas>(inicial ? completarFormularioCargas(inicial) : FORMULARIO_CARGAS_INICIAL);
   const [aviso, setAviso] = useState<string | null>(null);
-  const { guardar, pendiente, error } = useGuardarMemoria<FormularioCargas>("cargas", folio, setF);
+  const { guardar, pendiente, error } = useGuardarMemoria<FormularioCargas>("cargas", folio, (b) =>
+    setF(completarFormularioCargas(b)),
+  );
 
   const setP = (k: keyof ProjectInfo) => (v: string) => setF((p) => ({ ...p, project: { ...p.project, [k]: v } }));
   const setNivel = (i: number, cambio: Partial<NivelForm>) =>
@@ -45,13 +69,14 @@ export default function BajadaCargas({ folio, inicial, creditos }: Props) {
   const setElemento = (i: number, cambio: Partial<ElementoForm>) =>
     setF((p) => ({ ...p, elementos: p.elementos.map((e, j) => (j === i ? { ...e, ...cambio } : e)) }));
 
+  const entrada = useMemo(() => entradaCargas(f), [f]);
   const calculo = useMemo((): { ok: true; r: ResultadoBajada } | { ok: false; error: string } => {
     try {
-      return { ok: true, r: bajadaDeCargas(entradaCargas(f)) };
+      return { ok: true, r: bajadaDeCargas(entrada) };
     } catch (e) {
       return { ok: false, error: e instanceof Error ? e.message : String(e) };
     }
-  }, [f]);
+  }, [entrada]);
 
   const generar = () => {
     setAviso(null);
@@ -96,10 +121,44 @@ export default function BajadaCargas({ folio, inicial, creditos }: Props) {
                 <div className="sm:col-span-2 lg:col-span-3">
                   <Select label="Uso (carga viva)" value={n.uso} options={USOS} onChange={(uso) => setNivel(i, { uso })} />
                 </div>
-                <Field label="Espesor de losa" unit="cm" value={n.espesor} onChange={(espesor) => setNivel(i, { espesor })} />
-                <Field label="Peso del concreto" unit="t/m³" value={n.pesoConcreto} onChange={(pesoConcreto) => setNivel(i, { pesoConcreto })} />
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <Select label="Sistema de piso" value={n.sistema} options={SISTEMAS} onChange={(x) => setNivel(i, cambioSistema(x))} />
+                </div>
+                {SISTEMAS_PISO[n.sistema].peso === undefined ? (
+                  <>
+                    <Field
+                      label="Espesor de losa"
+                      unit="cm"
+                      value={n.espesor}
+                      // Si cambia el espesor de un preset de losa maciza, ya es captura a mano.
+                      onChange={(espesor) =>
+                        setNivel(i, { espesor, ...(SISTEMAS_PISO[n.sistema].espesor !== undefined ? { sistema: "manual" as const } : {}) })
+                      }
+                    />
+                    <Field label="Peso del concreto" unit="t/m³" value={n.pesoConcreto} onChange={(pesoConcreto) => setNivel(i, { pesoConcreto })} />
+                  </>
+                ) : (
+                  <Field
+                    label="Peso propio del sistema de piso"
+                    unit="kg/m²"
+                    value={n.pesoSistema}
+                    onChange={(pesoSistema) => setNivel(i, { pesoSistema })}
+                    placeholder="Dato de tu fabricante"
+                  />
+                )}
                 <Field label="Acabados e instalaciones" unit="kg/m²" value={n.acabados} onChange={(acabados) => setNivel(i, { acabados })} />
-                <Field label="Muros divisorios repartidos" unit="kg/m²" value={n.muros} onChange={(muros) => setNivel(i, { muros })} />
+                <div className="sm:col-span-2 lg:col-span-3">
+                  <Select label="Muros divisorios" value={n.tipoMuro} options={MUROS} onChange={(tipoMuro) => setNivel(i, { tipoMuro })} />
+                </div>
+                {n.tipoMuro === "manual" ? (
+                  <Field label="Muros divisorios repartidos" unit="kg/m²" value={n.muros} onChange={(muros) => setNivel(i, { muros })} placeholder="0" />
+                ) : (
+                  <>
+                    <Field label="Altura de los muros" unit="m" value={n.alturaMuro} onChange={(alturaMuro) => setNivel(i, { alturaMuro })} />
+                    <Field label="Longitud total de muros" unit="m" value={n.longitudMuro} onChange={(longitudMuro) => setNivel(i, { longitudMuro })} />
+                    <Field label="Área del nivel" unit="m²" value={n.areaNivel} onChange={(areaNivel) => setNivel(i, { areaNivel })} />
+                  </>
+                )}
                 <div className="flex flex-col justify-end gap-2 pb-1">
                   <Check label="Colada en el lugar (+20 kg/m²)" checked={n.coladaEnSitio} onChange={(coladaEnSitio) => setNivel(i, { coladaEnSitio })} />
                   <Check label="Con capa de mortero (+20 kg/m²)" checked={n.conMortero} onChange={(conMortero) => setNivel(i, { conMortero })} />
@@ -107,7 +166,9 @@ export default function BajadaCargas({ folio, inicial, creditos }: Props) {
               </div>
               {calculo.ok && calculo.r.niveles[i] && (
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
-                  CM = <b className="font-mono">{fmt(calculo.r.niveles[i].muerta, 0)}</b> kg/m² · CV ={" "}
+                  Losa = <b className="font-mono">{fmt(calculo.r.niveles[i].losa, 0)}</b> kg/m² · muros ={" "}
+                  <b className="font-mono">{fmt(calculo.r.niveles[i].muros, 0)}</b> kg/m² · CM ={" "}
+                  <b className="font-mono">{fmt(calculo.r.niveles[i].muerta, 0)}</b> kg/m² · CV ={" "}
                   <b className="font-mono">{fmt(calculo.r.niveles[i].viva.wm, 0)}</b> kg/m² · última ={" "}
                   <b className="font-mono">{fmt(calculo.r.niveles[i].ultima, 0)}</b> kg/m²
                 </p>
@@ -181,13 +242,14 @@ export default function BajadaCargas({ folio, inicial, creditos }: Props) {
       <Section title="Resultados">
         {calculo.ok ? (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[32rem] text-sm">
+            <table className="w-full min-w-[38rem] text-sm">
               <thead>
                 <tr className="text-left text-zinc-600 dark:text-zinc-400">
                   <th className="py-1.5 pr-4 font-medium">Elemento</th>
                   <th className="py-1.5 pr-4 text-right font-medium">Servicio (t)</th>
                   <th className="py-1.5 pr-4 text-right font-medium">Última (t)</th>
-                  <th className="py-1.5 text-right font-medium">Zapata cuadrada</th>
+                  <th className="py-1.5 pr-4 text-right font-medium">Zapata cuadrada</th>
+                  <th className="py-1.5 text-right font-medium">Diseñar</th>
                 </tr>
               </thead>
               <tbody>
@@ -196,20 +258,37 @@ export default function BajadaCargas({ folio, inicial, creditos }: Props) {
                     <td className="py-1.5 pr-4">{el.nombre}</td>
                     <td className="py-1.5 pr-4 text-right font-mono">{fmt(el.servicio)}</td>
                     <td className="py-1.5 pr-4 text-right font-mono">{fmt(el.ultima)}</td>
-                    <td className="py-1.5 text-right font-mono">
+                    <td className="py-1.5 pr-4 text-right font-mono">
                       {el.cimentacion ? `${fmt(el.cimentacion.lado)} × ${fmt(el.cimentacion.lado)} m` : "—"}
+                    </td>
+                    <td className="py-1.5 text-right whitespace-nowrap">
+                      <Link
+                        href={urlPrellenado("/civil/zapata", { carga: el.servicio, cargaUltima: el.ultima, qa: entrada.capacidadSuelo })}
+                        className="enlace"
+                      >
+                        Zapata
+                      </Link>
+                      {" · "}
+                      <Link href={urlPrellenado("/civil/columna", { carga: el.ultima })} className="enlace">
+                        Columna
+                      </Link>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
+            <p className="mt-2 text-sm text-zinc-500">
+              «Zapata» abre el diseño de la zapata con la carga de servicio, la última
+              {entrada.capacidadSuelo !== undefined ? " y la qa" : ""} de ese elemento; «Columna» abre el diseño de la
+              columna con la carga última como Pu.
+            </p>
           </div>
         ) : (
           <ErrorText>{calculo.error}</ErrorText>
         )}
       </Section>
 
-      {calculo.ok && <Graficas especs={graficasCargas(entradaCargas(f), calculo.r)} />}
+      {calculo.ok && <Graficas especs={graficasCargas(entrada, calculo.r)} />}
 
       <PieGenerar folio={folio} creditos={creditos} pendiente={pendiente} error={aviso ?? error} onGenerar={generar} />
     </div>

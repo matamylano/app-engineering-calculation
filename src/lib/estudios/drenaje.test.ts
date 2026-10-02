@@ -32,6 +32,40 @@ describe("formulario de drenaje pluvial", () => {
   });
 });
 
+describe("opciones nuevas del drenaje pluvial", () => {
+  it("lee formularios guardados antes de las opciones nuevas", () => {
+    const viejo = pluvial();
+    for (const k of ["diametroBajada", "captacion", "lluviaMensual", "lluviaAnual", "areaCaptacion", "coeficienteTecho", "personas", "dotacion", "demandaDiaria", "cisterna"])
+      delete viejo[k];
+    const f = leerFormularioPluvial(viejo)!;
+    expect(f.diametroBajada).toBe("100");
+    expect(f.captacion).toBe("");
+    expect(f.lluviaMensual).toHaveLength(12);
+    expect(calcularEstudio("pluvial", viejo).ok).toBe(true);
+  });
+
+  it("captación con lluvia mensual y área de azotea por omisión", () => {
+    const f = pluvial();
+    f.captacion = "si";
+    f.lluviaMensual = ["0", "0", "0", "0", "50", "150", "200", "200", "150", "50", "0", "0"];
+    const e = entradaPluvial(f);
+    expect(e.captacion).toMatchObject({ area: 120, coeficiente: 0.85, demandaDiaria: 200, personas: 4 });
+    expect(e.captacion!.lluviaMensual).toHaveLength(12);
+    expect(calcularEstudio("pluvial", f).ok).toBe(true);
+    // La demanda directa manda sobre personas × dotación.
+    f.demandaDiaria = "300";
+    expect(entradaPluvial(f).captacion).toMatchObject({ demandaDiaria: 300, personas: undefined });
+  });
+
+  it("captación sin lluvia explica el error y rechaza meses mal formados", () => {
+    const f = pluvial();
+    f.captacion = "si";
+    expect(calcularEstudio("pluvial", f)).toEqual({ ok: false, error: expect.stringMatching(/12 meses o la lluvia anual/) });
+    expect(leerFormularioPluvial({ ...f, lluviaMensual: ["1"] })).toBeNull();
+    expect(leerFormularioPluvial({ ...f, lluviaMensual: Array(12).fill(5) })).toBeNull();
+  });
+});
+
 describe("formulario de fosa séptica", () => {
   it("acepta el inicial y el servidor lo calcula", () => {
     expect(leerFormularioFosa(fosa())).toEqual(FORMULARIO_FOSA_INICIAL);
@@ -45,6 +79,35 @@ describe("formulario de fosa séptica", () => {
       ok: false,
       error: expect.stringMatching(/profundidad útil/),
     });
+  });
+});
+
+describe("opciones nuevas de la fosa", () => {
+  it("lee formularios guardados antes de las opciones nuevas", () => {
+    const viejo = fosa();
+    for (const k of ["disposicion", "diametroPozo", "profundidadMaximaPozo", "trampa", "metodoTrampa", "gastoFregadero", "retencionTrampa", "inicio", "costoDesazolve"])
+      delete viejo[k];
+    const f = leerFormularioFosa(viejo)!;
+    expect(f.disposicion).toBe("zanjas");
+    expect(entradaFosa(f)).toMatchObject({ disposicion: "zanjas", trampa: undefined, inicio: undefined });
+    expect(calcularEstudio("fosa", viejo).ok).toBe(true);
+  });
+
+  it("pozo de absorción, trampa y desazolve", () => {
+    const f = fosa();
+    f.disposicion = "pozo";
+    f.trampa = "si";
+    f.metodoTrampa = "gasto";
+    f.inicio = "2026-10";
+    f.costoDesazolve = "1800";
+    expect(entradaFosa(f)).toMatchObject({
+      pozo: { diametro: 1.5, profundidadMaxima: 3 },
+      trampa: { metodo: "gasto", gasto: 0.25, retencion: 3 },
+      inicio: "2026-10",
+      costoDesazolve: 1800,
+    });
+    expect(calcularEstudio("fosa", f).ok).toBe(true);
+    expect(calcularEstudio("fosa", { ...f, inicio: "octubre" })).toEqual({ ok: false, error: expect.stringMatching(/AAAA-MM/) });
   });
 });
 

@@ -34,3 +34,25 @@ export const FACTOR_ACCESORIOS = 0.2;
 export const EFICIENCIA_BOMBA = 0.65;
 /** Potencias comerciales de bombas sumergibles (HP). */
 export const BOMBAS_HP = [1, 1.5, 2, 3, 5, 7.5, 10, 15, 20, 25, 30, 40, 50, 60, 75, 100];
+
+// ── Energía, costo y extracción ─────────────────────────────────────────────
+
+/** kW por HP. */
+export const KW_POR_HP = 0.746;
+/**
+ * Eficiencia del motor sumergible cuando el usuario no la da. Los motores
+ * trifásicos de la NOM-016-ENER pasan de 85 %; los sumergibles suelen quedar
+ * entre 75 y 85 %: se usa 80 %, conservador.
+ */
+export const EFICIENCIA_MOTOR = 0.8;
+/**
+ * Tarifa eléctrica de referencia ($/kWh) que trae el formulario nuevo: costo
+ * medio aproximado de la tarifa GDMTO de CFE (media tensión ordinaria). La
+ * tarifa 9-CU de bombeo agrícola es mucho menor y la PDBT mayor; el usuario
+ * debe poner la de su recibo.
+ */
+export const TARIFA_REFERENCIA = 2.5;
+/** Días de bombeo al año cuando el usuario no los da. */
+export const DIAS_ANO = 365;
+/** Fracción del volumen concesionado a partir de la cual se avisa. */
+export const AVISO_CONCESION = 0.9;

@@ -6,6 +6,12 @@ import { almacen } from "@/lib/servidor/config";
 import { FOLIO_VALIDO } from "@/lib/servidor/memorias";
 import { sesionActual } from "@/lib/servidor/sesion";
 import type { DatosColumna } from "@/lib/servidor/tipos";
+import {
+  CAMPOS_PRELLENAR_COLUMNA,
+  completarFormularioColumna,
+  FORMULARIO_COLUMNA_INICIAL,
+} from "@/lib/estudios/columna";
+import { prellenar } from "@/lib/estudios/prellenar";
 import DisenoColumna from "./DisenoColumna";
 
 export const metadata: Metadata = { title: "Columna de concreto" };
@@ -13,7 +19,8 @@ export const metadata: Metadata = { title: "Columna de concreto" };
 export default async function Page({
   searchParams,
 }: PageProps<"/civil/columna">) {
-  const { folio } = await searchParams;
+  const params = await searchParams;
+  const { folio } = params;
   const sesion = await sesionActual();
   const alm = almacen();
   const creditos = sesion ? await alm.saldo(sesion.id) : null;
@@ -35,6 +42,11 @@ export default async function Page({
     editar = { folio, datos: m.datos as DatosColumna };
   }
 
+  // Sin folio, acepta datos por la URL (?carga=…&momento=…&b=…&h=…&altura=…).
+  const inicial = editar
+    ? completarFormularioColumna(editar.datos.formulario)
+    : prellenar(FORMULARIO_COLUMNA_INICIAL, params, CAMPOS_PRELLENAR_COLUMNA);
+
   return (
     <main className="pagina">
       <Link
@@ -48,13 +60,13 @@ export default async function Page({
       </h1>
       <p className="intro mt-3">
         Columna rectangular con estribos en un marco sin desplazamiento lateral, según las NTC de Concreto: carga
-        axial y momento en una dirección, excentricidad mínima, efectos de esbeltez, acero longitudinal y estribos.
-        La carga última sale de tu bajada de cargas.
+        axial y momento en una o en dos direcciones (Bresler), excentricidad mínima, efectos de esbeltez, acero
+        longitudinal, estribos y cuantificación con costo. La carga última sale de tu bajada de cargas.
       </p>
       <AvisoValidacion estudio="columna" />
       <DisenoColumna
         folio={editar?.folio}
-        inicial={editar?.datos.formulario}
+        inicial={inicial}
         creditos={creditos}
       />
     </main>

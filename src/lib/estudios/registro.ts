@@ -8,7 +8,7 @@ import { disenarPluvial } from "@/calc/drenaje/pluvial";
 import { disenarPozo } from "@/calc/pozos/pozo";
 import { disenarCasa } from "@/calc/hidrosanitaria/casa";
 import { disenarColumna } from "@/calc/concreto/columna";
-import { disenarLosa } from "@/calc/concreto/losa";
+import { disenarLosa, problemasLosa } from "@/calc/concreto/losa";
 import { disenarViga, problemasViga } from "@/calc/concreto/viga";
 import { disenarZapata } from "@/calc/concreto/zapata";
 import { runSoilStudy } from "@/calc/soils/study";
@@ -90,7 +90,7 @@ function calcularZapata(raw: unknown): Calculo<DatosZapata> {
   const entrada = entradaZapata(formulario);
   try {
     const resultado = disenarZapata(entrada);
-    if (!resultado.cumple) return { ok: false, error: "La zapata no pasa por cortante: aumenta el peralte o el lado." };
+    if (!resultado.cumple) return { ok: false, error: `La zapata no pasa: ${resultado.problemas.join("; ")}.` };
     return { ok: true, valor: { formulario, proyecto: formulario.project, entrada, resultado } };
   } catch (e) {
     return { ok: false, error: `Corrige los datos: ${errorDe(e)}` };
@@ -116,7 +116,7 @@ function calcularLosa(raw: unknown): Calculo<DatosLosa> {
   const entrada = entradaLosa(formulario);
   try {
     const resultado = disenarLosa(entrada);
-    if (!resultado.cumple) return { ok: false, error: "La losa no pasa por cortante: aumenta el espesor." };
+    if (!resultado.cumple) return { ok: false, error: `La losa no pasa: ${problemasLosa(resultado).join("; ")}.` };
     return { ok: true, valor: { formulario, proyecto: formulario.project, entrada, resultado } };
   } catch (e) {
     return { ok: false, error: `Corrige los datos: ${errorDe(e)}` };

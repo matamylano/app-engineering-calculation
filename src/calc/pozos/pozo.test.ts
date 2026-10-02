@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { disenarPozo, rectaSemilog, type EntradaPozo } from "./pozo";
+import { cargaSistema, disenarPozo, rectaSemilog, type EntradaPozo } from "./pozo";
 
 // Lecturas sobre la recta s = 2 + 0.8 log t a partir de 10 min.
 const tiempos = [10, 20, 50, 100, 200, 500, 1000];
@@ -58,6 +58,46 @@ describe("disenarPozo", () => {
     expect(r.potenciaComercial).toBe(7.5);
     expect(r.cumple).toBe(true);
     expect(r.advertencias).toEqual([]);
+  });
+
+  it("calcula energía, costo y volumen extraído", () => {
+    const r = disenarPozo({ ...base, tarifa: 2.5 });
+    // 7.5 HP · 0.746 / 0.8 = 6.994 kW; 24 h → 167.85 kWh/día; ×365/12 = 5 105.4 kWh/mes.
+    expect(r.energia.horasDia).toBe(24);
+    expect(r.energia.kw).toBeCloseTo(6.99375, 4);
+    expect(r.energia.kwhDia).toBeCloseTo(167.85, 2);
+    expect(r.energia.kwhMes).toBeCloseTo(5105.44, 1);
+    // 8 L/s · 3.6 · 24 = 691.2 m³/día; 252 288 m³/año; 167.85/691.2 = 0.2428 kWh/m³.
+    expect(r.extraccion.diario).toBeCloseTo(691.2, 6);
+    expect(r.extraccion.anual).toBeCloseTo(252288, 3);
+    expect(r.energia.kwhM3).toBeCloseTo(0.24284, 4);
+    // 5 105.4 · 2.5 = $12 763.6 al mes; 0.2428 · 2.5 = $0.607/m³.
+    expect(r.energia.costoMes).toBeCloseTo(12763.6, 0);
+    expect(r.energia.costoM3).toBeCloseTo(0.6071, 3);
+    // Sin tarifa no hay costo; 12 h/día y 200 días con motor de 90 %.
+    const s = disenarPozo({ ...base, horasDia: 12, diasAno: 200, eficienciaMotor: 0.9 });
+    expect(s.energia.costoMes).toBeUndefined();
+    expect(s.energia.kw).toBeCloseTo((7.5 * 0.746) / 0.9, 6);
+    expect(s.extraccion.anual).toBeCloseTo(0.008 * 3600 * 12 * 200, 6);
+  });
+
+  it("revisa el volumen concesionado", () => {
+    const pasa = disenarPozo({ ...base, volumenConcesionado: 200000 });
+    expect(pasa.cumple).toBe(false);
+    expect(pasa.problemas.join()).toMatch(/concesión/);
+    // 252 288 / 270 000 = 93 %: pasa, con aviso.
+    const justo = disenarPozo({ ...base, volumenConcesionado: 270000 });
+    expect(justo.extraccion.uso).toBeCloseTo(0.9344, 3);
+    expect(justo.cumple).toBe(true);
+    expect(justo.advertencias.join()).toMatch(/90 %/);
+  });
+
+  it("arma la curva del sistema", () => {
+    const r = disenarPozo(base);
+    // Sin gasto: nivel estático + carga en la descarga = 35 m; con el de diseño, la carga total.
+    expect(cargaSistema(base, r, 0)).toBeCloseTo(35, 9);
+    expect(cargaSistema(base, r, base.gastoDiseno)).toBeCloseTo(r.carga, 9);
+    expect(cargaSistema(base, r, 10)).toBeGreaterThan(r.carga);
   });
 
   it("calcula S con pozo de observación", () => {

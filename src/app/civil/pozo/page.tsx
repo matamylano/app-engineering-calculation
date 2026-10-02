@@ -6,6 +6,7 @@ import { almacen } from "@/lib/servidor/config";
 import { FOLIO_VALIDO } from "@/lib/servidor/memorias";
 import { sesionActual } from "@/lib/servidor/sesion";
 import type { DatosPozo } from "@/lib/servidor/tipos";
+import { leerFormularioPozo } from "@/lib/estudios/pozo";
 import DisenoPozo from "./DisenoPozo";
 
 export const metadata: Metadata = { title: "Pozo de agua" };
@@ -49,12 +50,14 @@ export default async function Page({
       <p className="intro mt-3">
         Con las lecturas de la prueba de bombeo se obtiene la transmisividad del acuífero por el método de
         Cooper-Jacob y el abatimiento con el gasto que quieres sacar. Da el diámetro del ademe, la longitud mínima de
-        rejilla, la profundidad de la bomba, la columna y la potencia.
+        rejilla, la profundidad de la bomba, la columna y la potencia, además del consumo y costo de energía, el
+        volumen extraído contra el título de concesión y la curva del sistema.
       </p>
       <AvisoValidacion estudio="pozo" />
       <DisenoPozo
         folio={editar?.folio}
-        inicial={editar?.datos.formulario}
+        // Las memorias anteriores no traen los campos nuevos: se completan vacíos.
+        inicial={editar ? (leerFormularioPozo(editar.datos.formulario) ?? undefined) : undefined}
         creditos={creditos}
       />
     </main>

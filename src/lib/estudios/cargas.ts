@@ -3,6 +3,7 @@
  * servidor lo vuelve a leer y a calcular para la memoria.
  */
 import { CARGAS_VIVAS, type EntradaBajada, type Uso } from "@/calc/cargas/bajada";
+import { SISTEMAS_PISO, TIPOS_MURO, type SistemaPiso, type TipoMuro } from "@/calc/cargas/catalogos";
 import { num, optNum } from "@/components/form";
 import { EMPTY_PROJECT, leerProyecto, type ProjectInfo } from "./proyecto";
 
@@ -15,11 +16,33 @@ export interface NivelForm {
   pesoConcreto: string;
   /** kg/m² */
   acabados: string;
-  /** kg/m² */
+  /** kg/m², vacío = 0 */
   muros: string;
   coladaEnSitio: boolean;
   conMortero: boolean;
+  /** Sistema de piso; "manual" = losa maciza con espesor y peso capturados (memorias viejas). */
+  sistema: SistemaPiso;
+  /** kg/m², solo para sistemas aligerados (vigueta y bovedilla, losacero) */
+  pesoSistema: string;
+  /** Tipo de muro divisorio; "manual" = carga equivalente capturada en `muros`. */
+  tipoMuro: TipoMuro;
+  /** m, altura de los muros divisorios */
+  alturaMuro: string;
+  /** m, longitud total de muros divisorios en el nivel */
+  longitudMuro: string;
+  /** m², área del nivel */
+  areaNivel: string;
 }
+
+/** Campos nuevos del nivel; un formulario viejo que no los trae se lee con estos. */
+const NIVEL_EXTRA = {
+  sistema: "manual" as SistemaPiso,
+  pesoSistema: "",
+  tipoMuro: "manual" as TipoMuro,
+  alturaMuro: "2.5",
+  longitudMuro: "",
+  areaNivel: "",
+};
 
 export interface ElementoForm {
   nombre: string;
@@ -48,6 +71,8 @@ export const NIVEL_AZOTEA: NivelForm = {
   muros: "0",
   coladaEnSitio: true,
   conMortero: true,
+  ...NIVEL_EXTRA,
+  sistema: "maciza-10",
 };
 
 export const NIVEL_ENTREPISO: NivelForm = {
@@ -73,18 +98,41 @@ export const FORMULARIO_CARGAS_INICIAL: FormularioCargas = {
 export const MAX_NIVELES = 6;
 export const MAX_ELEMENTOS = 30;
 
+/** Completa un formulario guardado con una versión anterior (niveles sin los campos nuevos). */
+export const completarFormularioCargas = (f: FormularioCargas): FormularioCargas => ({
+  ...f,
+  niveles: f.niveles.map((n) => ({ ...NIVEL_EXTRA, ...n })),
+});
+
 export function entradaCargas(f: FormularioCargas): EntradaBajada {
   return {
-    niveles: f.niveles.map((n) => ({
-      nombre: n.nombre.trim() || "Nivel",
-      uso: n.uso,
-      espesorLosa: num(n.espesor) / 100,
-      pesoConcreto: num(n.pesoConcreto),
-      acabados: num(n.acabados),
-      muros: num(n.muros),
-      coladaEnSitio: n.coladaEnSitio,
-      conMortero: n.conMortero,
-    })),
+    niveles: f.niveles.map((n) => {
+      const sistema = n.sistema ?? "manual";
+      const tipoMuro = n.tipoMuro ?? "manual";
+      const pesoMuro = TIPOS_MURO[tipoMuro]?.peso;
+      return {
+        nombre: n.nombre.trim() || "Nivel",
+        uso: n.uso,
+        espesorLosa: num(n.espesor) / 100,
+        pesoConcreto: num(n.pesoConcreto),
+        acabados: num(n.acabados),
+        muros: optNum(n.muros) ?? 0,
+        coladaEnSitio: n.coladaEnSitio,
+        conMortero: n.conMortero,
+        sistemaPiso: sistema,
+        pesoSistema: SISTEMAS_PISO[sistema]?.peso === undefined ? undefined : num(n.pesoSistema ?? ""),
+        muro:
+          pesoMuro === undefined
+            ? undefined
+            : {
+                tipo: tipoMuro,
+                peso: pesoMuro,
+                altura: num(n.alturaMuro ?? ""),
+                longitud: num(n.longitudMuro ?? ""),
+                area: num(n.areaNivel ?? ""),
+              },
+      };
+    }),
     elementos: f.elementos.map((e) => ({
       nombre: e.nombre.trim() || "Elemento",
       areaTributaria: num(e.area),
@@ -116,7 +164,18 @@ export function leerFormularioCargas(raw: unknown): FormularioCargas | null {
     if (campos.some((c) => c === null)) return null;
     if (typeof x.coladaEnSitio !== "boolean" || typeof x.conMortero !== "boolean") return null;
     const [nombre, espesor, pesoConcreto, acabados, muros] = campos as string[];
-    niveles.push({ nombre, uso: x.uso as Uso, espesor, pesoConcreto, acabados, muros, coladaEnSitio: x.coladaEnSitio, conMortero: x.conMortero });
+    // Campos nuevos: si faltan (memorias viejas) se toman los de omisión.
+    const sistema = x.sistema ?? NIVEL_EXTRA.sistema;
+    const tipoMuro = x.tipoMuro ?? NIVEL_EXTRA.tipoMuro;
+    if (typeof sistema !== "string" || !(sistema in SISTEMAS_PISO)) return null;
+    if (typeof tipoMuro !== "string" || !(tipoMuro in TIPOS_MURO)) return null;
+    const extra = (["pesoSistema", "alturaMuro", "longitudMuro", "areaNivel"] as const).map((k) => texto(x[k] ?? NIVEL_EXTRA[k]));
+    if (extra.some((c) => c === null)) return null;
+    const [pesoSistema, alturaMuro, longitudMuro, areaNivel] = extra as string[];
+    niveles.push({
+      nombre, uso: x.uso as Uso, espesor, pesoConcreto, acabados, muros, coladaEnSitio: x.coladaEnSitio, conMortero: x.conMortero,
+      sistema: sistema as SistemaPiso, pesoSistema, tipoMuro: tipoMuro as TipoMuro, alturaMuro, longitudMuro, areaNivel,
+    });
   }
   const elementos: ElementoForm[] = [];
   for (const x of r.elementos as Record<string, unknown>[]) {

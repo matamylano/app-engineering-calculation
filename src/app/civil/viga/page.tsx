@@ -6,6 +6,8 @@ import { almacen } from "@/lib/servidor/config";
 import { FOLIO_VALIDO } from "@/lib/servidor/memorias";
 import { sesionActual } from "@/lib/servidor/sesion";
 import type { DatosViga } from "@/lib/servidor/tipos";
+import { CAMPOS_PRELLENAR_VIGA, FORMULARIO_VIGA_INICIAL } from "@/lib/estudios/viga";
+import { prellenar } from "@/lib/estudios/prellenar";
 import DisenoViga from "./DisenoViga";
 
 export const metadata: Metadata = { title: "Viga de concreto" };
@@ -13,7 +15,8 @@ export const metadata: Metadata = { title: "Viga de concreto" };
 export default async function Page({
   searchParams,
 }: PageProps<"/civil/viga">) {
-  const { folio } = await searchParams;
+  const params = await searchParams;
+  const { folio } = params;
   const sesion = await sesionActual();
   const alm = almacen();
   const creditos = sesion ? await alm.saldo(sesion.id) : null;
@@ -35,6 +38,9 @@ export default async function Page({
     editar = { folio, datos: m.datos as DatosViga };
   }
 
+  // Valores por la URL (por ejemplo desde la losa o la bajada de cargas); ?folio= manda.
+  const prellenado = editar ? undefined : prellenar(FORMULARIO_VIGA_INICIAL, params, CAMPOS_PRELLENAR_VIGA);
+
   return (
     <main className="pagina">
       <Link
@@ -53,7 +59,7 @@ export default async function Page({
       <AvisoValidacion estudio="viga" />
       <DisenoViga
         folio={editar?.folio}
-        inicial={editar?.datos.formulario}
+        inicial={editar?.datos.formulario ?? prellenado}
         creditos={creditos}
       />
     </main>

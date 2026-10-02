@@ -4,7 +4,7 @@
  * vuelve a convertir para recalcular la memoria sin confiar en el navegador.
  */
 import type { FailureMode, FootingShape } from "@/calc/soils/terzaghi";
-import type { SoilStudyInput } from "@/calc/soils/study";
+import { ASENTAMIENTO_ADMISIBLE, type SoilStudyInput } from "@/calc/soils/study";
 import { toKNm3, toKPa, UNIT_SYSTEMS, type UnitSystem } from "@/calc/units";
 import { num, optNum } from "@/components/form";
 
@@ -17,6 +17,8 @@ export const VALUE_KEYS = [
   "p200", "p4", "ll", "pl", "cu", "cc",
   "c", "phi", "gamma", "df", "b", "fs", "dw", "gammaSat",
   "pressure", "es", "nu", "z", "h", "s0", "e0", "ccomp", "cs", "pc",
+  // Asentamiento total admisible (cm); vacío = 2.5 cm. Las memorias viejas no lo traen.
+  "sAdm",
 ] as const;
 export type ValueKey = (typeof VALUE_KEYS)[number];
 export type Values = Record<ValueKey, string>;
@@ -40,6 +42,7 @@ export const DEFAULT_VALUES: Values = {
   p200: "35", p4: "90", ll: "32", pl: "20", cu: "", cc: "",
   c: "2", phi: "28", gamma: "1.8", df: "1.2", b: "1.5", fs: "3", dw: "", gammaSat: "1.95",
   pressure: "", es: "1500", nu: "0.3", z: "", h: "", s0: "", e0: "", ccomp: "", cs: "", pc: "",
+  sAdm: "2.5",
 };
 
 
@@ -89,6 +92,7 @@ export function entradaDesdeFormulario(f: FormularioSuelos): SoilStudyInput {
       pressure: f.useQa ? undefined : stress(v.pressure),
       elasticModulus: stress(v.es),
       poisson: n(v.nu),
+      allowable: (optNum(v.sAdm ?? "") ?? ASENTAMIENTO_ADMISIBLE * 100) / 100,
       consolidation: f.hasClay
         ? {
             depthToMidLayer: n(v.z),
@@ -103,6 +107,16 @@ export function entradaDesdeFormulario(f: FormularioSuelos): SoilStudyInput {
     },
   };
 }
+
+/**
+ * Completa un formulario guardado con una versión anterior (sin los campos
+ * nuevos) para que el formulario en pantalla no tenga valores indefinidos.
+ */
+export const completarFormulario = (f: FormularioSuelos): FormularioSuelos => ({
+  ...FORMULARIO_INICIAL,
+  ...f,
+  values: { ...DEFAULT_VALUES, ...f.values },
+});
 
 const MAX_TEXTO = 200;
 const SHAPES: FootingShape[] = ["cuadrada", "corrida", "circular"];

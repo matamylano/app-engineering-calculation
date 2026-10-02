@@ -3,7 +3,10 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { VARILLAS } from "@/calc/concreto/ntc";
-import { disenarZapata, type ResultadoZapata } from "@/calc/concreto/zapata";
+import { cuantificarZapata, disenarZapata, type ResultadoZapata } from "@/calc/concreto/zapata";
+import { preciosDeFormulario, presupuesto, type Presupuesto } from "@/calc/obra/cuantificacion";
+import CamposObra from "@/components/obra/CamposObra";
+import TablaPresupuesto from "@/components/obra/TablaPresupuesto";
 import {
   ErrorText,
   Field,
@@ -14,10 +17,11 @@ import {
 } from "@/components/form";
 import { Graficas } from "@/components/graficas/Grafica";
 import PieGenerar from "@/components/PieGenerar";
-import { graficasZapata } from "@/lib/graficas/concreto";
+import { graficasZapataCompletas } from "@/lib/graficas/zapata";
 import { useGuardarMemoria } from "@/components/useGuardarMemoria";
 import type { ProjectInfo } from "@/lib/estudios/proyecto";
 import {
+  completarFormularioZapata,
   entradaZapata,
   FORMULARIO_ZAPATA_INICIAL,
   type FormularioZapata,
@@ -44,7 +48,7 @@ export default function DisenoZapata({ folio, inicial, creditos }: Props) {
   const { guardar, pendiente, error } = useGuardarMemoria<FormularioZapata>(
     "zapata",
     folio,
-    setF,
+    (g) => setF(completarFormularioZapata(g)),
   );
 
   const setP = (k: keyof ProjectInfo) => (v: string) =>
@@ -62,6 +66,23 @@ export default function DisenoZapata({ folio, inicial, creditos }: Props) {
     }
   }, [f]);
 
+  // Cuantificación: con un error en piezas o precios se avisa, pero el diseño sigue.
+  const obra = useMemo(():
+    | { ok: true; p: Presupuesto }
+    | { ok: false; error: string }
+    | null => {
+    if (!calculo.ok) return null;
+    try {
+      const { piezas, precios } = preciosDeFormulario(f);
+      const partidas = cuantificarZapata(entradaZapata(f), calculo.r, {
+        cimbra: f.cimbra === "perimetral",
+      });
+      return { ok: true, p: presupuesto(partidas, precios, piezas) };
+    } catch (e) {
+      return { ok: false, error: e instanceof Error ? e.message : String(e) };
+    }
+  }, [calculo, f]);
+
   const generar = () => {
     setAviso(null);
     if (!calculo.ok) {
@@ -72,7 +93,7 @@ export default function DisenoZapata({ folio, inicial, creditos }: Props) {
     }
     if (!calculo.r.cumple) {
       setAviso(
-        "La zapata no pasa por cortante; ajústala antes de generar la memoria.",
+        `La zapata no pasa: ${calculo.r.problemas.join("; ")}. Ajústala antes de generar la memoria.`,
       );
       return;
     }
@@ -156,6 +177,13 @@ export default function DisenoZapata({ folio, inicial, creditos }: Props) {
             value={f.incremento}
             onChange={set("incremento")}
           />
+          <Field
+            label="Momento de servicio en la base, M"
+            unit="t·m"
+            value={f.momento}
+            onChange={set("momento")}
+            placeholder="Vacío: sin momento"
+          />
         </div>
         <p className="mt-2 text-sm text-zinc-500">
           Las cargas salen de tu{" "}
@@ -166,30 +194,38 @@ export default function DisenoZapata({ folio, inicial, creditos }: Props) {
           <Link href="/civil/suelos" className="enlace">
             estudio de suelos
           </Link>
-          .
+          . El momento M actúa en la dirección del largo L; para el diseño se
+          toma Mu = M · Pu / P.
         </p>
       </Section>
 
       <Section title="2. Geometría y materiales">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field
-            label="Columna, lado c1"
+            label="Columna, lado c1 (paralelo a B)"
             unit="cm"
             value={f.c1}
             onChange={set("c1")}
           />
           <Field
-            label="Columna, lado c2"
+            label="Columna, lado c2 (paralelo a L)"
             unit="cm"
             value={f.c2}
             onChange={set("c2")}
           />
           <Field
-            label="Lado de la zapata, B"
+            label="Ancho de la zapata, B"
             unit="m"
             value={f.lado}
             onChange={set("lado")}
             placeholder="Vacío: el mínimo"
+          />
+          <Field
+            label="Largo de la zapata, L"
+            unit="m"
+            value={f.largo}
+            onChange={set("largo")}
+            placeholder="Vacío: cuadrada"
           />
           <Field
             label="Peralte total, h"
@@ -226,71 +262,144 @@ export default function DisenoZapata({ folio, inicial, creditos }: Props) {
 
       <Section title="Resultados">
         {calculo.ok ? (
-          <div className="grid gap-4 lg:grid-cols-2">
-            <table className="w-full text-sm">
-              <tbody>
-                <ResultRow
-                  label="Zapata"
-                  value={`${fmt(calculo.r.lado)} × ${fmt(calculo.r.lado)} m, h = ${fmt(Number(f.h), 0)} cm`}
-                />
-                <ResultRow
-                  label="Lado mínimo por qa"
-                  value={`${fmt(calculo.r.ladoMinimo)} m`}
-                />
-                <ResultRow
-                  label="Presión de servicio"
-                  value={`${fmt(calculo.r.presionServicio)} t/m²`}
-                />
-                <ResultRow
-                  label="Presión última"
-                  value={`${fmt(calculo.r.presionUltima)} t/m²`}
-                />
-                <ResultRow
-                  label="Peralte efectivo, d"
-                  value={`${fmt(calculo.r.d, 1)} cm`}
-                />
-              </tbody>
-            </table>
-            <table className="w-full text-sm">
-              <tbody>
-                <ResultRow
-                  label="Penetración (kg/cm²)"
-                  value={`${fmt(calculo.r.penetracion.actuante)} ≤ ${fmt(calculo.r.penetracion.resistente)} · ${cumple(calculo.r.penetracion.cumple)}`}
-                />
-                <ResultRow
-                  label="Viga ancha (t)"
-                  value={`${fmt(calculo.r.vigaAncha.actuante)} ≤ ${fmt(calculo.r.vigaAncha.resistente)} · ${cumple(calculo.r.vigaAncha.cumple)}`}
-                />
-                <ResultRow
-                  label="Momento último"
-                  value={`${fmt(calculo.r.momento)} t·m`}
-                />
-                <ResultRow
-                  label="Acero requerido"
-                  value={`${fmt(calculo.r.aceroDiseno)} cm²`}
-                />
-                <ResultRow
-                  label="Armado, en ambas direcciones"
-                  value={`${calculo.r.armado.cantidad} varillas #${calculo.r.armado.varilla} @ ${fmt(calculo.r.armado.separacion, 1)} cm`}
-                />
-              </tbody>
-            </table>
-            {!calculo.r.cumple && (
-              <div className="lg:col-span-2">
-                <ErrorText>
-                  La zapata no pasa por cortante. Aumenta el peralte o el lado.
-                </ErrorText>
-              </div>
-            )}
-          </div>
+          <Resultados r={calculo.r} h={Number(f.h)} qa={Number(f.qa)} />
         ) : (
           <ErrorText>{calculo.error}</ErrorText>
         )}
       </Section>
 
-      {calculo.ok && <Graficas especs={graficasZapata(entradaZapata(f), calculo.r)} />}
+      {calculo.ok && (
+        <Graficas especs={graficasZapataCompletas(entradaZapata(f), calculo.r)} />
+      )}
+
+      <Section title="Cuantificación y costo">
+        <div className="grid gap-4">
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <Select
+              label="Cimbra"
+              value={f.cimbra === "perimetral" ? "perimetral" : ""}
+              options={[
+                { value: "perimetral", label: "Cimbra en el perímetro" },
+                { value: "", label: "Colada contra el terreno" },
+              ]}
+              onChange={set("cimbra")}
+            />
+          </div>
+          <CamposObra
+            valores={f}
+            onChange={(k, v) => setF((p) => ({ ...p, [k]: v }))}
+            materiales={
+              f.cimbra === "perimetral"
+                ? ["concreto", "acero", "cimbra"]
+                : ["concreto", "acero"]
+            }
+          />
+          {obra?.ok && <TablaPresupuesto p={obra.p} />}
+          {obra && !obra.ok && <ErrorText>{obra.error}</ErrorText>}
+          <p className="text-sm text-zinc-500">
+            Incluye la plantilla de concreto pobre de 5 cm (con el precio del
+            concreto) y varillas con gancho a 90° de 12 diámetros en cada
+            extremo.
+          </p>
+        </div>
+      </Section>
 
       <PieGenerar folio={folio} creditos={creditos} pendiente={pendiente} error={aviso ?? error} onGenerar={generar} />
+    </div>
+  );
+}
+
+function Resultados({ r, h, qa }: { r: ResultadoZapata; h: number; qa: number }) {
+  const { largo: l, ancho: a } = r.direcciones;
+  const armado = (x: typeof l) =>
+    `${x.armado.cantidad} #${x.armado.varilla} @ ${fmt(x.armado.separacion, 1)} cm`;
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      <table className="w-full text-sm">
+        <tbody>
+          <ResultRow
+            label="Zapata"
+            value={`${fmt(r.lado)} × ${fmt(r.largo)} m, h = ${fmt(h, 0)} cm`}
+          />
+          <ResultRow
+            label={r.cuadrada ? "Lado mínimo por qa" : "Ancho mínimo por qa"}
+            value={`${fmt(r.ladoMinimo)} m`}
+          />
+          {r.presiones ? (
+            <>
+              <ResultRow
+                label="Excentricidad e = M/P"
+                value={`${fmt(r.presiones.excentricidad, 3)} m ≤ L/6 = ${fmt(r.presiones.limite, 3)} m · ${cumple(r.presiones.excentricidad <= r.presiones.limite + 1e-9)}`}
+              />
+              <ResultRow
+                label="Presión máxima de servicio"
+                value={`${fmt(r.presiones.maxima)} ≤ ${fmt(qa)} t/m² · ${cumple(r.presiones.maxima <= qa + 1e-9)}`}
+              />
+              <ResultRow
+                label="Presión mínima de servicio"
+                value={`${fmt(r.presiones.minima)} t/m²`}
+              />
+              <ResultRow
+                label="Presión última máxima"
+                value={`${fmt(r.presiones.maximaUltima)} t/m²`}
+              />
+            </>
+          ) : (
+            <>
+              <ResultRow
+                label="Presión de servicio"
+                value={`${fmt(r.presionServicio)} t/m²`}
+              />
+              <ResultRow
+                label="Presión última"
+                value={`${fmt(r.presionUltima)} t/m²`}
+              />
+            </>
+          )}
+          <ResultRow label="Peralte efectivo, d" value={`${fmt(r.d, 1)} cm`} />
+        </tbody>
+      </table>
+      <table className="w-full text-sm">
+        <tbody>
+          <ResultRow
+            label="Penetración (kg/cm²)"
+            value={`${fmt(r.penetracion.actuante)} ≤ ${fmt(r.penetracion.resistente)} · ${cumple(r.penetracion.cumple)}`}
+          />
+          {r.cuadrada && !r.presiones ? (
+            <>
+              <ResultRow
+                label="Viga ancha (t)"
+                value={`${fmt(r.vigaAncha.actuante)} ≤ ${fmt(r.vigaAncha.resistente)} · ${cumple(r.vigaAncha.cumple)}`}
+              />
+              <ResultRow label="Momento último" value={`${fmt(r.momento)} t·m`} />
+              <ResultRow label="Acero requerido" value={`${fmt(r.aceroDiseno)} cm²`} />
+              <ResultRow label="Armado, en ambas direcciones" value={armado(l)} />
+            </>
+          ) : (
+            <>
+              <ResultRow
+                label="Viga ancha, varillas paralelas a L (t)"
+                value={`${fmt(l.vigaAncha.actuante)} ≤ ${fmt(l.vigaAncha.resistente)} · ${cumple(l.vigaAncha.cumple)}`}
+              />
+              <ResultRow
+                label="Viga ancha, varillas paralelas a B (t)"
+                value={`${fmt(a.vigaAncha.actuante)} ≤ ${fmt(a.vigaAncha.resistente)} · ${cumple(a.vigaAncha.cumple)}`}
+              />
+              <ResultRow
+                label="Mu, varillas paralelas a L / a B"
+                value={`${fmt(l.momento)} / ${fmt(a.momento)} t·m`}
+              />
+              <ResultRow label="Armado paralelo a L" value={armado(l)} />
+              <ResultRow label="Armado paralelo a B" value={armado(a)} />
+            </>
+          )}
+        </tbody>
+      </table>
+      {!r.cumple && (
+        <div className="lg:col-span-2">
+          <ErrorText>La zapata no pasa: {r.problemas.join("; ")}.</ErrorText>
+        </div>
+      )}
     </div>
   );
 }

@@ -2,7 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { disenarFosa, type ResultadoFosa } from "@/calc/drenaje/fosa";
-import { ErrorText, Field, fmt, ResultRow, Section, Select } from "@/components/form";
+import { ANCHO_ZANJA, LARGO_MAXIMO_ZANJA, SEPARACION_POZOS } from "@/calc/drenaje/tablas";
+import { Check, ErrorText, Field, fmt, ResultRow, Section, Select } from "@/components/form";
 import { Graficas } from "@/components/graficas/Grafica";
 import PieGenerar from "@/components/PieGenerar";
 import { graficasFosa } from "@/lib/graficas/agua";
@@ -10,6 +11,14 @@ import { useGuardarMemoria } from "@/components/useGuardarMemoria";
 import { entradaFosa, FORMULARIO_FOSA_INICIAL, type FormularioFosa } from "@/lib/estudios/fosa";
 import type { ProjectInfo } from "@/lib/estudios/proyecto";
 
+const DISPOSICIONES = [
+  { value: "zanjas", label: "Zanjas de infiltración" },
+  { value: "pozo", label: "Pozo de absorción" },
+];
+const METODOS_TRAMPA = [
+  { value: "personas", label: "Por personas" },
+  { value: "gasto", label: "Por gasto del fregadero" },
+];
 const LIMPIEZAS = [1, 2, 3, 4, 5].map((n) => ({ value: String(n), label: n === 1 ? "Cada año" : `Cada ${n} años` }));
 
 interface Props {
@@ -19,7 +28,8 @@ interface Props {
 }
 
 export default function DisenoFosa({ folio, inicial, creditos }: Props) {
-  const [f, setF] = useState<FormularioFosa>(inicial ?? FORMULARIO_FOSA_INICIAL);
+  // Las memorias anteriores no traen las opciones nuevas: se completan con los valores de omisión.
+  const [f, setF] = useState<FormularioFosa>({ ...FORMULARIO_FOSA_INICIAL, ...inicial });
   const [aviso, setAviso] = useState<string | null>(null);
   const { guardar, pendiente, error } = useGuardarMemoria<FormularioFosa>("fosa", folio, setF);
 
@@ -67,11 +77,62 @@ export default function DisenoFosa({ folio, inicial, creditos }: Props) {
       </Section>
 
       <Section title="2. Fosa y terreno">
-        <div className="grid gap-4 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           <Field label="Profundidad útil de la fosa" unit="m" value={f.profundidad} onChange={set("profundidad")} />
           <Field label="Tasa de aplicación del suelo" unit="L/m²/día" value={f.tasaAplicacion} onChange={set("tasaAplicacion")} />
+          <Select label="El agua tratada va a" value={f.disposicion} options={DISPOSICIONES} onChange={set("disposicion")} />
+          {f.disposicion === "pozo" && (
+            <>
+              <Field label="Diámetro del pozo" unit="m" value={f.diametroPozo} onChange={set("diametroPozo")} />
+              <Field
+                label="Profundidad útil máxima de cada pozo"
+                unit="m"
+                value={f.profundidadMaximaPozo}
+                onChange={set("profundidadMaximaPozo")}
+              />
+            </>
+          )}
         </div>
-        <p className="mt-2 text-sm text-zinc-500">La tasa de aplicación sale de la prueba de percolación del terreno.</p>
+        <p className="mt-2 text-sm text-zinc-500">
+          La tasa de aplicación sale de la prueba de percolación del terreno.
+          {f.disposicion === "pozo" &&
+            " El pozo de absorción conviene cuando hay poco terreno o la capa permeable está honda; el fondo debe quedar lejos del nivel freático."}
+        </p>
+      </Section>
+
+      <Section title="3. Trampa de grasas (opcional)">
+        <Check label="Calcular la trampa de grasas de la cocina" checked={f.trampa === "si"} onChange={(v) => set("trampa")(v ? "si" : "")} />
+        {f.trampa === "si" && (
+          <div className="mt-4 grid gap-4 sm:grid-cols-3">
+            <Select label="Método" value={f.metodoTrampa} options={METODOS_TRAMPA} onChange={set("metodoTrampa")} />
+            {f.metodoTrampa === "gasto" && (
+              <>
+                <Field label="Gasto del fregadero" unit="L/s" value={f.gastoFregadero} onChange={set("gastoFregadero")} />
+                <Field label="Tiempo de retención" unit="min" value={f.retencionTrampa} onChange={set("retencionTrampa")} />
+              </>
+            )}
+          </div>
+        )}
+        <p className="mt-2 text-sm text-zinc-500">
+          Separa la grasa del agua de la cocina antes de que llegue a la fosa; alarga la vida del campo de infiltración.
+        </p>
+      </Section>
+
+      <Section title="4. Mantenimiento (opcional)">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            type="text"
+            label="Mes de arranque de la fosa"
+            value={f.inicio}
+            onChange={set("inicio")}
+            placeholder="AAAA-MM, por ejemplo 2026-10"
+          />
+          <Field label="Precio de un desazolve" unit="$" value={f.costoDesazolve} onChange={set("costoDesazolve")} placeholder="Opcional" />
+        </div>
+        <p className="mt-2 text-sm text-zinc-500">
+          Con el mes de arranque se fechan los siguientes desazolves; con el precio del servicio se calcula lo que cuesta
+          al año.
+        </p>
       </Section>
 
       <Section title="Resultados">
@@ -95,10 +156,57 @@ export default function DisenoFosa({ folio, inicial, creditos }: Props) {
             <table className="w-full text-sm">
               <tbody>
                 <ResultRow label="Área de infiltración" value={`${fmt(calculo.r.campo.area, 1)} m²`} />
-                <ResultRow label="Zanja de 0.60 m de ancho" value={`${fmt(calculo.r.campo.longitud, 1)} m`} />
-                <ResultRow label="Zanjas de hasta 30 m" value={`${calculo.r.campo.zanjas}`} />
+                {calculo.r.pozo ? (
+                  <>
+                    <ResultRow label="Profundidad de pared que se necesita" value={`${fmt(calculo.r.pozo.profundidadTotal)} m`} />
+                    <ResultRow
+                      label="Pozos de absorción"
+                      value={`${calculo.r.pozo.cantidad} de ${fmt(calculo.r.pozo.diametro)} m × ${fmt(calculo.r.pozo.profundidad, 1)} m útiles`}
+                    />
+                    <ResultRow
+                      label="Separación libre entre pozos"
+                      value={`${fmt(SEPARACION_POZOS * calculo.r.pozo.diametro, 1)} m o más`}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <ResultRow label={`Zanja de ${fmt(ANCHO_ZANJA)} m de ancho`} value={`${fmt(calculo.r.campo.longitud, 1)} m`} />
+                    <ResultRow label={`Zanjas de hasta ${LARGO_MAXIMO_ZANJA} m`} value={`${calculo.r.campo.zanjas}`} />
+                  </>
+                )}
               </tbody>
             </table>
+            {calculo.r.trampa && (
+              <table className="w-full text-sm">
+                <tbody>
+                  <ResultRow label="Trampa de grasas" value={`${fmt(calculo.r.trampa.volumen, 0)} L`} />
+                  <ResultRow
+                    label="Medidas interiores"
+                    value={`${fmt(calculo.r.trampa.ancho)} × ${fmt(calculo.r.trampa.largo)} × ${fmt(calculo.r.trampa.tirante)} m`}
+                  />
+                </tbody>
+              </table>
+            )}
+            {calculo.r.mantenimiento && (
+              <table className="w-full text-sm">
+                <tbody>
+                  <ResultRow
+                    label="Lodo al momento del desazolve"
+                    value={`${fmt(calculo.r.mantenimiento.lodos, 0)} L (${fmt(calculo.r.mantenimiento.fraccion * 100, 0)} %)`}
+                  />
+                  <ResultRow
+                    label="Desazolve"
+                    value={calculo.r.mantenimiento.periodo === 1 ? "cada año" : `cada ${calculo.r.mantenimiento.periodo} años`}
+                  />
+                  {calculo.r.mantenimiento.fechas.length > 0 && (
+                    <ResultRow label="Próximos desazolves" value={calculo.r.mantenimiento.fechas.join(", ")} />
+                  )}
+                  {calculo.r.mantenimiento.costoAnual !== undefined && (
+                    <ResultRow label="Costo anual equivalente" value={`$${fmt(calculo.r.mantenimiento.costoAnual, 0)}`} />
+                  )}
+                </tbody>
+              </table>
+            )}
             {!calculo.r.cumple && (
               <div className="lg:col-span-2">
                 <ErrorText>La fosa no pasa: {calculo.r.problemas.join("; ")}.</ErrorText>

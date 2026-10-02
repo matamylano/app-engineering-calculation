@@ -1,11 +1,27 @@
 import { graficasCargas } from "@/lib/graficas/suelos-cargas";
-import { FACTOR_MUERTA, FACTOR_VIVA, INCREMENTO_COLADO, INCREMENTO_MORTERO } from "@/calc/cargas/bajada";
+import { FACTOR_MUERTA, FACTOR_VIVA, INCREMENTO_COLADO, INCREMENTO_MORTERO, type Nivel } from "@/calc/cargas/bajada";
+import { SISTEMAS_PISO, TIPOS_MURO } from "@/calc/cargas/catalogos";
 import { fmt } from "@/components/form";
 import type { DatosCargas, RegistroMemoria } from "@/lib/servidor/tipos";
 import { blank, fechaLarga, H, HojaFirma, Rows, AnexoGraficas } from "../MemoriaComun";
 
 const t = (x: number) => `${fmt(x)} t`;
 const kg = (x: number) => `${fmt(x, 0)} kg/m²`;
+
+/** Descripción del sistema de piso; las memorias viejas solo traen el espesor de losa maciza. */
+function sistemaDe(n: Nivel) {
+  const maciza = `losa maciza de ${fmt(n.espesorLosa * 100, 0)} cm`;
+  if (n.pesoSistema === undefined) return `${maciza}, γ = ${fmt(n.pesoConcreto)} t/m³`;
+  const nombre = n.sistemaPiso ? SISTEMAS_PISO[n.sistemaPiso]?.nombre : undefined;
+  return `${nombre ?? "sistema de piso aligerado"}, ${fmt(n.pesoSistema, 0)} kg/m²`;
+}
+
+function murosDe(n: Nivel, equivalente: number) {
+  if (!n.muro) return equivalente > 0 ? `carga equivalente capturada, ${fmt(equivalente, 0)} kg/m²` : "sin muros divisorios";
+  const m = n.muro;
+  const nombre = TIPOS_MURO[m.tipo]?.nombre ?? "muro";
+  return `${nombre} (${fmt(m.peso, 0)} kg/m² de muro): ${fmt(m.peso, 0)} × ${fmt(m.altura)} m × ${fmt(m.longitud)} m / ${fmt(m.area)} m² = ${fmt(equivalente, 0)} kg/m²`;
+}
 
 function Tabla({ cabeza, filas }: { cabeza: string[]; filas: (string | number)[][] }) {
   return (
@@ -39,6 +55,8 @@ export default function MemoriaCargas({ m }: { m: RegistroMemoria }) {
   const { firma, folio } = m;
   const conCimentacion = entrada.capacidadSuelo !== undefined;
   const mayor = resultado.elementos.reduce((a, b) => (b.servicio > a.servicio ? b : a));
+  // Las memorias nuevas registran el sistema de piso y el tipo de muro de cada nivel.
+  const conSistemas = entrada.niveles.some((n) => n.sistemaPiso !== undefined || n.muro !== undefined);
 
   return (
     <article className="memoria rounded-2xl border border-zinc-200 bg-white p-6 text-black shadow-elevada sm:p-10">
@@ -79,7 +97,9 @@ export default function MemoriaCargas({ m }: { m: RegistroMemoria }) {
       <Tabla
         cabeza={["Nivel", "Losa", "Increm.", "Acabados", "Muros", "CM", "CV (Wm)", "CM + CV", "Última"]}
         filas={resultado.niveles.map((n, i) => [
-          `${n.nombre} (${n.viva.nombre.split(" (")[0].toLowerCase()}, losa de ${fmt(entrada.niveles[i].espesorLosa * 100, 0)} cm)`,
+          entrada.niveles[i].pesoSistema === undefined
+            ? `${n.nombre} (${n.viva.nombre.split(" (")[0].toLowerCase()}, losa de ${fmt(entrada.niveles[i].espesorLosa * 100, 0)} cm)`
+            : `${n.nombre} (${n.viva.nombre.split(" (")[0].toLowerCase()})`,
           fmt(n.losa, 0),
           fmt(n.incremento, 0),
           fmt(n.acabados, 0),
@@ -94,6 +114,22 @@ export default function MemoriaCargas({ m }: { m: RegistroMemoria }) {
         Valores en kg/m². Carga última = {FACTOR_MUERTA}·CM + {FACTOR_VIVA}·CV. Peso volumétrico del concreto:{" "}
         {[...new Set(entrada.niveles.map((n) => fmt(n.pesoConcreto)))].join(", ")} t/m³.
       </p>
+      {conSistemas && (
+        <>
+          <p className="mt-3 text-sm font-semibold">Sistema de piso y muros divisorios</p>
+          <Rows
+            rows={entrada.niveles.flatMap((n, i): [string, string][] => [
+              [`${resultado.niveles[i].nombre}: sistema de piso`, sistemaDe(n)],
+              [`${resultado.niveles[i].nombre}: muros divisorios`, murosDe(n, resultado.niveles[i].muros)],
+            ])}
+          />
+          <p className="mt-1 text-xs">
+            Los pesos de sistemas aligerados y de muros son valores típicos de fabricantes y de tablas de pesos de
+            materiales; el responsable debe confirmarlos con los del producto que se use en obra. Carga de muros
+            repartida: w = peso del muro × altura × longitud / área del nivel.
+          </p>
+        </>
+      )}
 
       <H>3. Carga por elemento</H>
       {resultado.elementos.map((el, i) => (

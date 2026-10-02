@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import type { FailureMode, FootingShape } from "@/calc/soils/terzaghi";
 import { Graficas } from "@/components/graficas/Grafica";
 import PieGenerar from "@/components/PieGenerar";
@@ -8,7 +9,9 @@ import { graficasSuelos } from "@/lib/graficas/suelos-cargas";
 import { runSoilStudy, type SoilStudyResult } from "@/calc/soils/study";
 import { fromKPa, UNIT_SYSTEMS } from "@/calc/units";
 import { Check, ErrorText, Field, fmt, ResultRow, Section, Select } from "@/components/form";
+import { urlPrellenado } from "@/lib/estudios/prellenar";
 import {
+  completarFormulario,
   entradaDesdeFormulario,
   FORMULARIO_INICIAL,
   unitsOf,
@@ -17,6 +20,7 @@ import {
   type ValueKey,
 } from "@/lib/estudios/suelos";
 import { useGuardarMemoria } from "@/components/useGuardarMemoria";
+import TablaDisenoSuelos from "./TablaDisenoSuelos";
 
 const SHAPES: { value: FootingShape; label: string }[] = [
   { value: "cuadrada", label: "Zapata cuadrada" },
@@ -38,10 +42,10 @@ interface Props {
 }
 
 export default function SoilStudy({ folio, inicial, creditos }: Props) {
-  const [f, setF] = useState<FormularioSuelos>(inicial ?? FORMULARIO_INICIAL);
+  const [f, setF] = useState<FormularioSuelos>(inicial ? completarFormulario(inicial) : FORMULARIO_INICIAL);
   const [notice, setNotice] = useState<string | null>(null);
   const { guardar, pendiente: pending, error } = useGuardarMemoria<FormularioSuelos>("suelos", folio, (b) =>
-    setF({ ...FORMULARIO_INICIAL, ...b }),
+    setF(completarFormulario(b)),
   );
 
   const v = f.values;
@@ -136,13 +140,21 @@ export default function SoilStudy({ folio, inicial, creditos }: Props) {
           </div>
           <div className="mt-4">
             {result.bearing.ok ? (
-              <table className="w-full max-w-md text-sm">
-                <tbody>
-                  <ResultRow label="Nc / Nq / Nγ" value={`${fmt(result.bearing.value.factors.Nc)} / ${fmt(result.bearing.value.factors.Nq)} / ${fmt(result.bearing.value.factors.Ngamma)}`} />
-                  <ResultRow label="Capacidad última, qu" value={st(result.bearing.value.ultimate)} />
-                  <ResultRow label="Capacidad admisible, qa" value={`${st(result.bearing.value.allowable)} · ${fmt(fromKPa(result.bearing.value.allowable, "kg/cm²"))} kg/cm²`} />
-                </tbody>
-              </table>
+              <>
+                <table className="w-full max-w-md text-sm">
+                  <tbody>
+                    <ResultRow label="Nc / Nq / Nγ" value={`${fmt(result.bearing.value.factors.Nc)} / ${fmt(result.bearing.value.factors.Nq)} / ${fmt(result.bearing.value.factors.Ngamma)}`} />
+                    <ResultRow label="Capacidad última, qu" value={st(result.bearing.value.ultimate)} />
+                    <ResultRow label="Capacidad admisible, qa" value={`${st(result.bearing.value.allowable)} · ${fmt(fromKPa(result.bearing.value.allowable, "kg/cm²"))} kg/cm²`} />
+                  </tbody>
+                </table>
+                <p className="mt-3 text-sm">
+                  {/* La zapata siempre trabaja qa en t/m², aunque el estudio esté en kPa. */}
+                  <Link href={urlPrellenado("/civil/zapata", { qa: fromKPa(result.bearing.value.allowable, "t/m²") })} className="enlace">
+                    Diseñar una zapata con este qa →
+                  </Link>
+                </p>
+              </>
             ) : (
               <ErrorText>{result.bearing.error}</ErrorText>
             )}
@@ -157,6 +169,7 @@ export default function SoilStudy({ folio, inicial, creditos }: Props) {
             {!useQa && <Field label="Presión de contacto, q" unit={S} value={v.pressure} onChange={set("pressure")} />}
             <Field label="Módulo de elasticidad, Es" unit={S} value={v.es} onChange={set("es")} />
             <Field label="Relación de Poisson, ν" value={v.nu} onChange={set("nu")} />
+            <Field label="Asentamiento total admisible" unit="cm" value={v.sAdm} onChange={set("sAdm")} placeholder="2.5" />
             <div className="flex items-end pb-2">
               <Check label="Hay un estrato de arcilla compresible" checked={hasClay} onChange={flag("hasClay")} />
             </div>
@@ -185,6 +198,12 @@ export default function SoilStudy({ folio, inicial, creditos }: Props) {
                     <ResultRow label="Por consolidación" value={`${fmt(result.settlement.value.consolidation.settlement * 100)} cm`} />
                   )}
                   <ResultRow label="Total" value={`${fmt(result.settlement.value.total * 100)} cm`} />
+                  {result.settlement.value.allowable !== undefined && (
+                    <ResultRow
+                      label="Admisible"
+                      value={`${fmt(result.settlement.value.allowable * 100)} cm · ${result.settlement.value.meetsAllowable ? "cumple" : "no cumple"}`}
+                    />
+                  )}
                 </tbody>
               </table>
             ) : (
@@ -192,6 +211,28 @@ export default function SoilStudy({ folio, inicial, creditos }: Props) {
             )}
           </div>
         </Section>
+
+        {result.problemas && result.problemas.length > 0 && (
+          <p className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
+            Ojo: {result.problemas.join(" ")} Puedes generar la memoria; quedará indicado que no cumple.
+          </p>
+        )}
+
+        {result.designTable && (
+          <Section title="4. Tabla de diseño: qa según ancho y desplante">
+            <p className="text-sm text-zinc-600 dark:text-zinc-400">
+              Usa esta tabla para escoger el tamaño de la zapata. Resaltados, el ancho y el desplante capturados (si
+              coinciden con la tabla).
+            </p>
+            <TablaDisenoSuelos
+              tabla={result.designTable}
+              unidad={S}
+              ancho={input.bearing.width}
+              profundidad={input.bearing.depth}
+              circular={shape === "circular"}
+            />
+          </Section>
+        )}
 
         <Graficas especs={graficasSuelos(input, result, units)} />
 

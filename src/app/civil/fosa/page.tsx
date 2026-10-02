@@ -6,6 +6,8 @@ import { almacen } from "@/lib/servidor/config";
 import { FOLIO_VALIDO } from "@/lib/servidor/memorias";
 import { sesionActual } from "@/lib/servidor/sesion";
 import type { DatosFosa } from "@/lib/servidor/tipos";
+import { CAMPOS_PRELLENAR_FOSA, FORMULARIO_FOSA_INICIAL } from "@/lib/estudios/fosa";
+import { prellenar } from "@/lib/estudios/prellenar";
 import DisenoFosa from "./DisenoFosa";
 
 export const metadata: Metadata = { title: "Fosa séptica" };
@@ -13,7 +15,8 @@ export const metadata: Metadata = { title: "Fosa séptica" };
 export default async function Page({
   searchParams,
 }: PageProps<"/civil/fosa">) {
-  const { folio } = await searchParams;
+  const params = await searchParams;
+  const { folio } = params;
   const sesion = await sesionActual();
   const alm = almacen();
   const creditos = sesion ? await alm.saldo(sesion.id) : null;
@@ -53,7 +56,7 @@ export default async function Page({
       <AvisoValidacion estudio="fosa" />
       <DisenoFosa
         folio={editar?.folio}
-        inicial={editar?.datos.formulario}
+        inicial={editar?.datos.formulario ?? prellenar(FORMULARIO_FOSA_INICIAL, params, CAMPOS_PRELLENAR_FOSA)}
         creditos={creditos}
       />
     </main>

@@ -20,6 +20,29 @@ describe("formulario de pozo", () => {
     expect(e.aberturaRejilla).toBeCloseTo(0.15);
   });
 
+  it("lee las memorias anteriores sin los campos nuevos", () => {
+    const viejo = copia();
+    for (const k of ["horasDia", "diasAno", "eficienciaMotor", "tarifa", "volumenConcesionado"]) delete viejo[k];
+    const f = leerFormularioPozo(viejo)!;
+    expect(f.tarifa).toBe("");
+    const e = entradaPozo(f);
+    expect(e.tarifa).toBeUndefined();
+    expect(e.eficienciaMotor).toBeUndefined();
+    expect(calcularEstudio("pozo", viejo).ok).toBe(true);
+  });
+
+  it("lee energía y concesión", () => {
+    const e = entradaPozo({ ...copia(), eficienciaMotor: "85", horasDia: "10", volumenConcesionado: "50000" });
+    expect(e.eficienciaMotor).toBeCloseTo(0.85);
+    expect(e.horasDia).toBe(10);
+    expect(e.tarifa).toBe(2.5);
+    // 8 L/s · 3.6 · 10 h · 365 = 105 120 m³ > 50 000.
+    expect(calcularEstudio("pozo", { ...copia(), horasDia: "10", volumenConcesionado: "50000" })).toEqual({
+      ok: false,
+      error: expect.stringMatching(/concesión/),
+    });
+  });
+
   it("rechaza formas inesperadas", () => {
     expect(leerFormularioPozo({ ...copia(), lecturas: [{ t: 1, s: "1" }] })).toBeNull();
     expect(leerFormularioPozo({ ...copia(), lecturas: Array(61).fill({ t: "1", s: "1" }) })).toBeNull();

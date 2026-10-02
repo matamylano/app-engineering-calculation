@@ -83,3 +83,24 @@ describe("bajadaDeCargas", () => {
     expect(redondearLado(1.2101)).toBe(1.15);
   });
 });
+
+describe("sistemas de piso y muros por tipo", () => {
+  it("un sistema aligerado usa su peso en lugar de espesor × γ", () => {
+    // Vigueta y bovedilla: 270 + 40 + 150 = 460 kg/m²
+    const n = cargaNivel({ ...azotea, espesorLosa: Number.NaN, sistemaPiso: "vigueta-bovedilla-concreto", pesoSistema: 270 });
+    expect(n.losa).toBe(270);
+    expect(n.muerta).toBeCloseTo(460, 9);
+  });
+
+  it("calcula la carga equivalente de muros", () => {
+    // Tabique 300 kg/m² × 2.5 m × 20 m / 60 m² = 250 kg/m²
+    const n = cargaNivel({ ...entrepiso, muros: 0, muro: { tipo: "tabique-rojo", peso: 300, altura: 2.5, longitud: 20, area: 60 } });
+    expect(n.muros).toBeCloseTo(250, 9);
+    expect(n.muerta).toBeCloseTo(240 + 40 + 120 + 250, 9);
+  });
+
+  it("rechaza datos de muro fuera de rango", () => {
+    expect(() => cargaNivel({ ...entrepiso, muro: { tipo: "tablaroca", peso: 30, altura: 2.5, longitud: 10, area: 0 } })).toThrow(/área/);
+    expect(() => cargaNivel({ ...azotea, sistemaPiso: "losacero", pesoSistema: 0 })).toThrow(/sistema de piso/);
+  });
+});

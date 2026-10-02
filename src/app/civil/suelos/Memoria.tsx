@@ -5,6 +5,7 @@ import { fmt } from "@/components/form";
 import { blank, H, HojaFirma, Rows, ZONA, AnexoGraficas } from "../MemoriaComun";
 import type { ProjectInfo } from "@/lib/estudios/suelos";
 import type { DatosSuelos, FirmaMemoria, RegistroMemoria } from "@/lib/servidor/tipos";
+import TablaDisenoSuelos from "./TablaDisenoSuelos";
 
 export interface MemoriaSnapshot {
   folio: string;
@@ -55,6 +56,10 @@ export default function Memoria({ snapshot }: { snapshot: MemoriaSnapshot }) {
   const fecha = new Date(date).toLocaleDateString("es-MX", { day: "numeric", month: "long", year: "numeric", timeZone: ZONA });
   const sc = input.bearing.shape === "corrida" ? "1.0" : "1.3";
   const sg = { corrida: "0.5", cuadrada: "0.4", circular: "0.3" }[input.bearing.shape];
+  // Las memorias viejas no traen la revisión del asentamiento ni la tabla de diseño.
+  const revisa = s.allowable !== undefined;
+  const tabla = result.designTable;
+  const nConclusiones = tabla ? 6 : 5;
 
   return (
     <article className="memoria rounded-2xl border border-zinc-200 bg-white p-6 text-black shadow-elevada sm:p-10">
@@ -160,15 +165,52 @@ export default function Memoria({ snapshot }: { snapshot: MemoriaSnapshot }) {
               ] as [string, string][])
             : []),
           ["Asentamiento total estimado", cm(s.total)],
+          ...(revisa
+            ? ([
+                ["Asentamiento total admisible", cm(s.allowable as number)],
+                ["Revisión", s.meetsAllowable ? "Cumple (total ≤ admisible)" : "NO CUMPLE (total > admisible)"],
+              ] as [string, string][])
+            : []),
         ]}
       />
+      {revisa && !s.meetsAllowable && (
+        <p className="mt-2 border border-black px-3 py-2 text-sm">
+          <b>Advertencia:</b> el asentamiento total estimado rebasa el admisible. Se recomienda ampliar el cimiento
+          para bajar la presión de contacto, o mejorar el suelo de desplante (sustitución o compactación), y volver a
+          revisar.
+        </p>
+      )}
 
-      <H>5. Conclusiones</H>
+      {tabla && (
+        <>
+          <H>5. Tabla de diseño</H>
+          <p className="mt-2 text-sm">
+            Capacidad de carga admisible para otros anchos y profundidades de desplante de la zapata {shape}, con los
+            mismos parámetros del suelo y FS = {fmt(b.safetyFactor, 1)}. Al cambiar el ancho o el desplante deben
+            revisarse de nuevo los asentamientos.
+          </p>
+          <TablaDisenoSuelos
+            tabla={tabla}
+            unidad={S}
+            ancho={input.bearing.width}
+            profundidad={input.bearing.depth}
+            circular={input.bearing.shape === "circular"}
+            papel
+          />
+        </>
+      )}
+
+      <H>{nConclusiones}. Conclusiones</H>
       <p className="mt-2 text-sm">
         El suelo de desplante se clasifica como {sucs.symbol} ({sucs.name.toLowerCase()}). Para una zapata {shape}{" "}
         de {fmt(input.bearing.width)} m desplantada a {fmt(input.bearing.depth)} m, se obtiene una capacidad de carga
         admisible de <b>{st(b.allowable)}</b> ({fmt(fromKPa(b.allowable, "kg/cm²"))} kg/cm²) con un factor de
-        seguridad de {fmt(b.safetyFactor, 1)}, y un asentamiento total estimado de <b>{cm(s.total)}</b>.
+        seguridad de {fmt(b.safetyFactor, 1)}, y un asentamiento total estimado de <b>{cm(s.total)}</b>
+        {revisa &&
+          (s.meetsAllowable
+            ? `, menor o igual que el admisible de ${cm(s.allowable as number)}`
+            : `, que NO CUMPLE con el admisible de ${cm(s.allowable as number)}; se recomienda ampliar el cimiento o mejorar el suelo`)}
+        .
       </p>
       <p className="mt-2 text-sm">
         Los resultados dependen de que los datos proporcionados representen el subsuelo del predio. Si durante la

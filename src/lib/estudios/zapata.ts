@@ -3,10 +3,11 @@
  * servidor lo vuelve a leer y a calcular para la memoria.
  */
 import type { EntradaZapata } from "@/calc/concreto/zapata";
+import { CAMPOS_OBRA, FORMULARIO_OBRA_INICIAL, type FormularioObra } from "@/calc/obra/cuantificacion";
 import { num, optNum } from "@/components/form";
 import { EMPTY_PROJECT, leerProyecto, type ProjectInfo } from "./proyecto";
 
-export interface FormularioZapata {
+export interface FormularioZapata extends FormularioObra {
   project: ProjectInfo;
   /** Nombre de la zapata o de la columna que recibe. */
   elemento: string;
@@ -30,6 +31,12 @@ export interface FormularioZapata {
   varilla: string;
   /** m, vacío para usar el mínimo */
   lado: string;
+  /** m, en la dirección del momento; vacío = zapata cuadrada */
+  largo: string;
+  /** t·m de servicio en la dirección de L; vacío = sin momento */
+  momento: string;
+  /** "perimetral" si se cuela con cimbra en el perímetro; "" contra el terreno. */
+  cimbra: string;
 }
 
 export const FORMULARIO_ZAPATA_INICIAL: FormularioZapata = {
@@ -47,7 +54,24 @@ export const FORMULARIO_ZAPATA_INICIAL: FormularioZapata = {
   fy: "4200",
   varilla: "4",
   lado: "",
+  largo: "",
+  momento: "",
+  cimbra: "perimetral",
+  ...FORMULARIO_OBRA_INICIAL,
 };
+
+/** Valores de los campos nuevos para formularios guardados antes de que existieran: todo apagado. */
+const CAMPOS_NUEVOS_APAGADOS = { largo: "", momento: "", cimbra: "", ...FORMULARIO_OBRA_INICIAL };
+
+/** Completa un formulario viejo (memoria o borrador) con los campos que le faltan. */
+export function completarFormularioZapata(f: FormularioZapata): FormularioZapata {
+  const c = { ...f } as Record<string, unknown>;
+  for (const [k, v] of Object.entries(CAMPOS_NUEVOS_APAGADOS)) if (typeof c[k] !== "string") c[k] = v;
+  return c as unknown as FormularioZapata;
+}
+
+/** Campos que se pueden prellenar desde la URL (por ejemplo, desde la bajada de cargas o la columna). */
+export const CAMPOS_PRELLENAR_ZAPATA = ["carga", "cargaUltima", "qa", "c1", "c2"] as const;
 
 const CAMPOS = [
   "elemento",
@@ -63,7 +87,13 @@ const CAMPOS = [
   "fy",
   "varilla",
   "lado",
+  "largo",
+  "momento",
+  "cimbra",
+  ...CAMPOS_OBRA,
 ] as const;
+
+const opcional = (s: string | undefined) => optNum(s ?? "");
 
 export function entradaZapata(f: FormularioZapata): EntradaZapata {
   return {
@@ -79,6 +109,8 @@ export function entradaZapata(f: FormularioZapata): EntradaZapata {
     fy: num(f.fy),
     varilla: num(f.varilla),
     lado: optNum(f.lado),
+    largo: opcional(f.largo),
+    momento: opcional(f.momento),
   };
 }
 

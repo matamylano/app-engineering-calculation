@@ -1,5 +1,6 @@
 import { graficasPozo } from "@/lib/graficas/agua";
-import { EFICIENCIA_BOMBA, FACTOR_ACCESORIOS, C_COLUMNA, VELOCIDAD_ENTRADA } from "@/calc/pozos/tablas";
+import { graficasPozoExtra } from "@/lib/graficas/pozo";
+import { EFICIENCIA_BOMBA, FACTOR_ACCESORIOS, C_COLUMNA, KW_POR_HP, VELOCIDAD_ENTRADA } from "@/calc/pozos/tablas";
 import { fmt } from "@/components/form";
 import type { DatosPozo, RegistroMemoria } from "@/lib/servidor/tipos";
 import { blank, fechaLarga, H, HojaFirma, Rows, AnexoGraficas } from "../MemoriaComun";
@@ -8,6 +9,10 @@ export default function MemoriaPozo({ m }: { m: RegistroMemoria }) {
   const { proyecto: project, entrada: e, resultado: r } = m.datos as DatosPozo;
   const { firma, folio } = m;
   const observacion = e.radioObservacion !== undefined;
+  // Las memorias anteriores no traen energía ni extracción.
+  const en = r.energia;
+  const x = r.extraccion;
+  const pesos = (v: number, d = 0) => `$${fmt(v, d)}`;
 
   return (
     <article className="memoria rounded-2xl border border-zinc-200 bg-white p-6 text-black shadow-elevada sm:p-10">
@@ -106,15 +111,70 @@ export default function MemoriaPozo({ m }: { m: RegistroMemoria }) {
         ]}
       />
 
-      <H>6. Conclusiones</H>
+      {en && x && (
+        <>
+          <H>6. Energía y costo de bombeo</H>
+          <Rows
+            rows={[
+              [
+                `Potencia eléctrica, ${fmt(r.potenciaComercial, 1)} HP · ${KW_POR_HP} / ${fmt(en.eficienciaMotor * 100, 0)} % del motor`,
+                `${fmt(en.kw)} kW`,
+              ],
+              ["Operación", `${fmt(en.horasDia, 1)} h/día, ${fmt(en.diasAno, 0)} días/año`],
+              ["Energía al día; al mes", `${fmt(en.kwhDia, 0)} kWh; ${fmt(en.kwhMes, 0)} kWh`],
+              ["Energía por m³ bombeado", `${fmt(en.kwhM3, 3)} kWh/m³`],
+              ...(en.costoMes !== undefined
+                ? ([
+                    ["Tarifa eléctrica", `${pesos(en.tarifa ?? 0, 2)}/kWh`],
+                    ["Costo de energía al mes; al año", `${pesos(en.costoMes)}; ${pesos(en.costoAno ?? 0)}`],
+                    ["Costo de energía por m³", pesos(en.costoM3 ?? 0, 2)],
+                  ] as [string, string][])
+                : []),
+            ]}
+          />
+          <p className="mt-2 text-sm">
+            Se toma la bomba a su potencia de placa, lo que da un consumo conservador. El costo es solo de energía, con
+            la tarifa que indicó el usuario; no incluye cargos fijos, demanda ni IVA.
+          </p>
+
+          <H>7. Volumen de extracción</H>
+          <Rows
+            rows={[
+              ["Volumen diario", `${fmt(x.diario, 0)} m³`],
+              ["Volumen mensual", `${fmt(x.mensual, 0)} m³`],
+              ["Volumen anual", `${fmt(x.anual, 0)} m³`],
+              ...(x.concesionado !== undefined
+                ? ([
+                    ["Volumen concesionado (título de CONAGUA)", `${fmt(x.concesionado, 0)} m³/año`],
+                    ["Uso del volumen concesionado", `${fmt((x.uso ?? 0) * 100, 0)} %`],
+                  ] as [string, string][])
+                : []),
+            ]}
+          />
+          {x.concesionado === undefined && (
+            <p className="mt-2 text-sm">
+              No se indicó volumen concesionado; la extracción debe quedar dentro del título de concesión de CONAGUA.
+            </p>
+          )}
+        </>
+      )}
+
+      <H>{en && x ? 8 : 6}. Conclusiones</H>
       <p className="mt-2 text-sm">
         El acuífero tiene una transmisividad de {fmt(r.transmisividad, 0)} m²/día. Para extraer{" "}
         <b>{fmt(e.gastoDiseno)} L/s</b> se requiere ademe de <b>{r.ademe}&quot;</b>, al menos{" "}
         <b>{fmt(r.rejilla.longitudMinima, 1)} m de rejilla</b> y una <b>bomba sumergible de {fmt(r.potenciaComercial, 1)} HP</b>{" "}
         colocada a {fmt(r.colocacion, 0)} m con columna de {r.columna.nominal}.
+        {en && x && (
+          <>
+            {" "}
+            Se extraen {fmt(x.anual, 0)} m³ al año con {fmt(en.kwhMes, 0)} kWh al mes
+            {en.costoMes !== undefined && <> (unos {pesos(en.costoMes)} al mes de energía, {pesos(en.costoM3 ?? 0, 2)} por m³)</>}.
+          </>
+        )}
       </p>
 
-      <AnexoGraficas especs={graficasPozo(e, r)} />
+      <AnexoGraficas especs={[...graficasPozo(e, r), ...graficasPozoExtra(e, r)]} />
 
       <HojaFirma folio={folio} project={project} firma={firma} />
     </article>

@@ -3,10 +3,11 @@
  * vuelve a leer y a calcular para la memoria.
  */
 import type { EntradaColumna } from "@/calc/concreto/columna";
-import { num } from "@/components/form";
+import { CAMPOS_OBRA, FORMULARIO_OBRA_INICIAL, type FormularioObra } from "@/calc/obra/cuantificacion";
+import { num, optNum } from "@/components/form";
 import { EMPTY_PROJECT, leerProyecto, type ProjectInfo } from "./proyecto";
 
-export interface FormularioColumna {
+export interface FormularioColumna extends FormularioObra {
   project: ProjectInfo;
   elemento: string;
   /** t */
@@ -24,6 +25,8 @@ export interface FormularioColumna {
   fy: string;
   varilla: string;
   estribo: string;
+  /** t·m, segundo momento en la dirección de b; vacío = flexión en una dirección */
+  momentoB: string;
 }
 
 export const FORMULARIO_COLUMNA_INICIAL: FormularioColumna = {
@@ -39,9 +42,35 @@ export const FORMULARIO_COLUMNA_INICIAL: FormularioColumna = {
   fy: "4200",
   varilla: "5",
   estribo: "3",
+  momentoB: "",
+  ...FORMULARIO_OBRA_INICIAL,
 };
 
-const CAMPOS = ["elemento", "carga", "momento", "altura", "b", "h", "recubrimiento", "fc", "fy", "varilla", "estribo"] as const;
+/** Completa un formulario viejo (memoria o borrador) con los campos nuevos apagados. */
+export function completarFormularioColumna(f: FormularioColumna): FormularioColumna {
+  const c = { ...f } as Record<string, unknown>;
+  for (const [k, v] of Object.entries({ momentoB: "", ...FORMULARIO_OBRA_INICIAL })) if (typeof c[k] !== "string") c[k] = v;
+  return c as unknown as FormularioColumna;
+}
+
+/** Campos que se pueden prellenar desde la URL (por ejemplo, desde la bajada de cargas). */
+export const CAMPOS_PRELLENAR_COLUMNA = ["carga", "momento", "b", "h", "altura"] as const;
+
+const CAMPOS = [
+  "elemento",
+  "carga",
+  "momento",
+  "altura",
+  "b",
+  "h",
+  "recubrimiento",
+  "fc",
+  "fy",
+  "varilla",
+  "estribo",
+  "momentoB",
+  ...CAMPOS_OBRA,
+] as const;
 
 export function entradaColumna(f: FormularioColumna): EntradaColumna {
   return {
@@ -55,6 +84,7 @@ export function entradaColumna(f: FormularioColumna): EntradaColumna {
     fy: num(f.fy),
     varilla: num(f.varilla),
     estribo: num(f.estribo),
+    momentoB: optNum(f.momentoB ?? ""),
   };
 }
 

@@ -3,8 +3,15 @@
  * usuario. El servidor lo vuelve a leer y a calcular para la memoria.
  */
 import type { EntradaCasa } from "@/calc/hidrosanitaria/casa";
-import { MUEBLES, type Mueble } from "@/calc/hidrosanitaria/tablas";
-import { num } from "@/components/form";
+import {
+  CALENTADORES,
+  MUEBLES,
+  RESERVA_CISTERNA,
+  RESERVA_TINACO,
+  type Mueble,
+  type TipoCalentador,
+} from "@/calc/hidrosanitaria/tablas";
+import { num, optNum } from "@/components/form";
 import { EMPTY_PROJECT, leerProyecto, type ProjectInfo } from "./proyecto";
 
 export interface FormularioHidrosanitaria {
@@ -12,7 +19,9 @@ export interface FormularioHidrosanitaria {
   habitantes: string;
   /** L/hab/día */
   dotacion: string;
+  /** días; vacío = RESERVA_CISTERNA */
   diasCisterna: string;
+  /** días (0.5 = medio día); vacío = RESERVA_TINACO */
   diasTinaco: string;
   muebles: Record<Mueble, string>;
   /** m */
@@ -22,6 +31,15 @@ export interface FormularioHidrosanitaria {
   longitudBombeo: string;
   /** min */
   tiempoLlenado: string;
+  calentador: TipoCalentador;
+  /** vacío = las regaderas de la casa, hasta 2 */
+  regaderasSimultaneas: string;
+  /** L/persona/día; vacío = criterio CONUEE */
+  consumoCaliente: string;
+  /** °C; vacío = 15 °C */
+  temperaturaFria: string;
+  /** m, para contar registros; vacío = según planos */
+  longitudDrenaje: string;
 }
 
 export const FORMULARIO_HIDROSANITARIA_INICIAL: FormularioHidrosanitaria = {
@@ -30,12 +48,27 @@ export const FORMULARIO_HIDROSANITARIA_INICIAL: FormularioHidrosanitaria = {
   dotacion: "150",
   diasCisterna: "2",
   diasTinaco: "1",
-  muebles: { excusado: "2", lavabo: "2", regadera: "2", fregadero: "1", lavadero: "1", lavadora: "1" },
+  muebles: {
+    excusado: "2",
+    lavabo: "2",
+    regadera: "2",
+    tina: "0",
+    fregadero: "1",
+    lavavajillas: "0",
+    lavadero: "1",
+    lavadora: "1",
+    llaveJardin: "0",
+  },
   alturaTinaco: "4",
   longitudTinaco: "15",
   alturaBombeo: "7",
   longitudBombeo: "10",
   tiempoLlenado: "30",
+  calentador: "paso",
+  regaderasSimultaneas: "",
+  consumoCaliente: "",
+  temperaturaFria: "",
+  longitudDrenaje: "",
 };
 
 const CAMPOS = [
@@ -48,24 +81,37 @@ const CAMPOS = [
   "alturaBombeo",
   "longitudBombeo",
   "tiempoLlenado",
+  "regaderasSimultaneas",
+  "consumoCaliente",
+  "temperaturaFria",
+  "longitudDrenaje",
 ] as const;
 
 const LISTA_MUEBLES = Object.keys(MUEBLES) as Mueble[];
+
+const TIPOS_CALENTADOR = Object.keys(CALENTADORES) as TipoCalentador[];
+
+/** Vacío o ausente (memorias anteriores) → el valor por omisión. */
+const conOmision = (s: string | undefined, omision: number) => ((s ?? "").trim() === "" ? omision : num(s!));
+const opcional = (s: string | undefined) => optNum(s ?? "");
 
 export function entradaHidrosanitaria(f: FormularioHidrosanitaria): EntradaCasa {
   return {
     habitantes: num(f.habitantes),
     dotacion: num(f.dotacion),
-    diasCisterna: num(f.diasCisterna),
-    diasTinaco: num(f.diasTinaco),
-    muebles: Object.fromEntries(
-      LISTA_MUEBLES.map((m) => [m, f.muebles[m].trim() === "" ? 0 : num(f.muebles[m])]),
-    ) as Record<Mueble, number>,
+    diasCisterna: conOmision(f.diasCisterna, RESERVA_CISTERNA),
+    diasTinaco: conOmision(f.diasTinaco, RESERVA_TINACO),
+    muebles: Object.fromEntries(LISTA_MUEBLES.map((m) => [m, conOmision(f.muebles[m], 0)])) as Record<Mueble, number>,
     alturaTinaco: num(f.alturaTinaco),
     longitudTinaco: num(f.longitudTinaco),
     alturaBombeo: num(f.alturaBombeo),
     longitudBombeo: num(f.longitudBombeo),
     tiempoLlenado: num(f.tiempoLlenado),
+    calentador: TIPOS_CALENTADOR.includes(f.calentador) ? f.calentador : "ninguno",
+    regaderasSimultaneas: opcional(f.regaderasSimultaneas),
+    consumoCaliente: opcional(f.consumoCaliente),
+    temperaturaFria: opcional(f.temperaturaFria),
+    longitudDrenaje: opcional(f.longitudDrenaje),
   };
 }
 
@@ -85,7 +131,10 @@ export function leerFormularioHidrosanitaria(raw: unknown): FormularioHidrosanit
     if (v === null) return null;
     muebles[m] = v;
   }
-  const f = { project, muebles } as FormularioHidrosanitaria;
+  // Las memorias anteriores no traen calentador: se leen sin calentador.
+  const calentador = r.calentador ?? "ninguno";
+  if (!TIPOS_CALENTADOR.includes(calentador as TipoCalentador)) return null;
+  const f = { project, muebles, calentador } as FormularioHidrosanitaria;
   for (const k of CAMPOS) {
     const v = texto(r[k] ?? "");
     if (v === null) return null;

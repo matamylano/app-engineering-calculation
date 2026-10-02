@@ -6,6 +6,8 @@ import { almacen } from "@/lib/servidor/config";
 import { FOLIO_VALIDO } from "@/lib/servidor/memorias";
 import { sesionActual } from "@/lib/servidor/sesion";
 import type { DatosPluvial } from "@/lib/servidor/tipos";
+import { CAMPOS_PRELLENAR_PLUVIAL, FORMULARIO_PLUVIAL_INICIAL } from "@/lib/estudios/pluvial";
+import { prellenar } from "@/lib/estudios/prellenar";
 import DisenoPluvial from "./DisenoPluvial";
 
 export const metadata: Metadata = { title: "Drenaje pluvial" };
@@ -13,7 +15,8 @@ export const metadata: Metadata = { title: "Drenaje pluvial" };
 export default async function Page({
   searchParams,
 }: PageProps<"/civil/pluvial">) {
-  const { folio } = await searchParams;
+  const params = await searchParams;
+  const { folio } = params;
   const sesion = await sesionActual();
   const alm = almacen();
   const creditos = sesion ? await alm.saldo(sesion.id) : null;
@@ -53,7 +56,7 @@ export default async function Page({
       <AvisoValidacion estudio="pluvial" />
       <DisenoPluvial
         folio={editar?.folio}
-        inicial={editar?.datos.formulario}
+        inicial={editar?.datos.formulario ?? prellenar(FORMULARIO_PLUVIAL_INICIAL, params, CAMPOS_PRELLENAR_PLUVIAL)}
         creditos={creditos}
       />
     </main>

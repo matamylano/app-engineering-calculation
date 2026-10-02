@@ -2,8 +2,17 @@
 
 import { useMemo, useState } from "react";
 import { disenarCasa, type ResultadoCasa } from "@/calc/hidrosanitaria/casa";
-import { MUEBLES, type Mueble } from "@/calc/hidrosanitaria/tablas";
-import { ErrorText, Field, fmt, ResultRow, Section } from "@/components/form";
+import {
+  CALENTADORES,
+  CONSUMO_CALIENTE,
+  MUEBLES,
+  RESERVA_CISTERNA,
+  RESERVA_TINACO,
+  TEMPERATURA_FRIA,
+  type Mueble,
+  type TipoCalentador,
+} from "@/calc/hidrosanitaria/tablas";
+import { ErrorText, Field, fmt, ResultRow, Section, Select } from "@/components/form";
 import { Graficas } from "@/components/graficas/Grafica";
 import PieGenerar from "@/components/PieGenerar";
 import { graficasHidrosanitaria } from "@/lib/graficas/agua";
@@ -14,9 +23,14 @@ import {
   type FormularioHidrosanitaria,
 } from "@/lib/estudios/hidrosanitaria";
 import type { ProjectInfo } from "@/lib/estudios/proyecto";
+import TablaMaterialesHidrosanitaria, { textoCalentador } from "./TablaMaterialesHidrosanitaria";
 
 const LISTA_MUEBLES = Object.keys(MUEBLES) as Mueble[];
 const litros = (x: number) => `${fmt(x, 0)} L`;
+const OPCIONES_CALENTADOR = (Object.keys(CALENTADORES) as TipoCalentador[]).map((value) => ({
+  value,
+  label: CALENTADORES[value],
+}));
 
 interface Props {
   folio?: string;
@@ -30,7 +44,7 @@ export default function DisenoHidrosanitaria({ folio, inicial, creditos }: Props
   const { guardar, pendiente, error } = useGuardarMemoria<FormularioHidrosanitaria>("hidrosanitaria", folio, setF);
 
   const setP = (k: keyof ProjectInfo) => (v: string) => setF((p) => ({ ...p, project: { ...p.project, [k]: v } }));
-  const set = (k: Exclude<keyof FormularioHidrosanitaria, "project" | "muebles">) => (v: string) =>
+  const set = (k: Exclude<keyof FormularioHidrosanitaria, "project" | "muebles" | "calentador">) => (v: string) =>
     setF((p) => ({ ...p, [k]: v }));
   const setMueble = (m: Mueble) => (v: string) => setF((p) => ({ ...p, muebles: { ...p.muebles, [m]: v } }));
 
@@ -71,10 +85,25 @@ export default function DisenoHidrosanitaria({ folio, inicial, creditos }: Props
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <Field label="Habitantes" value={f.habitantes} onChange={set("habitantes")} />
           <Field label="Dotación" unit="L/hab/día" value={f.dotacion} onChange={set("dotacion")} />
-          <Field label="Reserva en cisterna" unit="días" value={f.diasCisterna} onChange={set("diasCisterna")} />
-          <Field label="Reserva en tinaco" unit="días" value={f.diasTinaco} onChange={set("diasTinaco")} />
+          <Field
+            label="Reserva en cisterna"
+            unit="días"
+            value={f.diasCisterna}
+            onChange={set("diasCisterna")}
+            placeholder={`Vacío: ${RESERVA_CISTERNA}`}
+          />
+          <Field
+            label="Reserva en tinaco"
+            unit="días"
+            value={f.diasTinaco}
+            onChange={set("diasTinaco")}
+            placeholder={`Vacío: ${RESERVA_TINACO}`}
+          />
         </div>
-        <p className="mt-2 text-sm text-zinc-500">Revisa la dotación que pide el reglamento de tu municipio.</p>
+        <p className="mt-2 text-sm text-zinc-500">
+          Revisa la dotación que pide el reglamento de tu municipio. Si la zona tiene tandeo, pon en la cisterna los
+          días seguidos sin agua más uno (hasta 15). En el tinaco puedes usar fracciones: 0.5 es medio día.
+        </p>
       </Section>
 
       <Section title="2. Muebles">
@@ -92,7 +121,57 @@ export default function DisenoHidrosanitaria({ folio, inicial, creditos }: Props
           <Field label="Desnivel de la cisterna al tinaco" unit="m" value={f.alturaBombeo} onChange={set("alturaBombeo")} />
           <Field label="Tubo de la bomba al tinaco" unit="m" value={f.longitudBombeo} onChange={set("longitudBombeo")} />
           <Field label="Tiempo para llenar el tinaco" unit="min" value={f.tiempoLlenado} onChange={set("tiempoLlenado")} />
+          <Field
+            label="Drenaje de la casa a la red"
+            unit="m"
+            value={f.longitudDrenaje}
+            onChange={set("longitudDrenaje")}
+            placeholder="Vacío: registros según planos"
+          />
         </div>
+      </Section>
+
+      <Section title="4. Calentador de agua">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <Select
+            label="Tipo de calentador"
+            value={f.calentador}
+            options={OPCIONES_CALENTADOR}
+            onChange={(v) => setF((p) => ({ ...p, calentador: v }))}
+          />
+          {f.calentador !== "ninguno" && (
+            <>
+              <Field
+                label="Regaderas a la vez"
+                unit="piezas"
+                value={f.regaderasSimultaneas}
+                onChange={set("regaderasSimultaneas")}
+                placeholder="Vacío: hasta 2"
+              />
+              <Field
+                label="Agua caliente por persona"
+                unit="L/día"
+                value={f.consumoCaliente}
+                onChange={set("consumoCaliente")}
+                placeholder={`Vacío: ${CONSUMO_CALIENTE}`}
+              />
+              <Field
+                label="Temperatura del agua fría"
+                unit="°C"
+                value={f.temperaturaFria}
+                onChange={set("temperaturaFria")}
+                placeholder={`Vacío: ${TEMPERATURA_FRIA}`}
+              />
+            </>
+          )}
+        </div>
+        {f.calentador !== "ninguno" && (
+          <p className="mt-2 text-sm text-zinc-500">
+            De paso: se dimensiona con las regaderas a la vez (10 L/min cada una, a 40 °C). De depósito: con el baño en
+            la hora pico. Solar: con el agua caliente de todo el día; deja un calentador de paso de respaldo para días
+            nublados.
+          </p>
+        )}
       </Section>
 
       <Section title="Resultados">
@@ -128,6 +207,12 @@ export default function DisenoHidrosanitaria({ folio, inicial, creditos }: Props
                   label="Albañal"
                   value={`${calculo.r.drenaje.albanal} mm al ${calculo.r.drenaje.pendiente} %`}
                 />
+                {calculo.r.calentador && (
+                  <ResultRow
+                    label={`Calentador ${CALENTADORES[calculo.r.calentador.tipo].toLowerCase()}`}
+                    value={textoCalentador(calculo.r.calentador)}
+                  />
+                )}
               </tbody>
             </table>
             {!calculo.r.cumple && (
@@ -140,6 +225,15 @@ export default function DisenoHidrosanitaria({ folio, inicial, creditos }: Props
           <ErrorText>{calculo.error}</ErrorText>
         )}
       </Section>
+
+      {calculo.ok && (
+        <Section title="Equipos y piezas para cotizar">
+          <TablaMaterialesHidrosanitaria partidas={calculo.r.materiales} />
+          <p className="mt-3 text-sm text-zinc-500">
+            Los metros de tubo salen de los planos de la casa; aquí van los diámetros para pedirlos.
+          </p>
+        </Section>
+      )}
 
       {calculo.ok && <Graficas especs={graficasHidrosanitaria(entradaHidrosanitaria(f), calculo.r)} />}
 

@@ -6,6 +6,9 @@
  * cortantes salen de coeficientes según cómo se apoya la viga; da el acero
  * de tensión arriba y abajo, y los estribos.
  */
+import type { Partida } from "@/calc/obra/cuantificacion";
+import { kgPorMetro } from "@/calc/obra/cuantificacion";
+import { calcularFlecha, FRACCION_VIVA_SOSTENIDA, type ResultadoFlecha } from "./deflexiones";
 import {
   aceroPorFlexion,
   cuantiaMaxima,
@@ -50,6 +53,10 @@ export interface EntradaViga {
   /** Número de la varilla longitudinal y del estribo. */
   varilla: number;
   estribo: number;
+  /** Fracción de la carga viva que actúa de forma sostenida, para la flecha diferida (0 a 1). */
+  vivaSostenida?: number;
+  /** La flecha puede dañar muros o acabados frágiles: límite L / 480 + 0.3 cm. */
+  elementosFragiles?: boolean;
 }
 
 export interface Lecho {
@@ -86,6 +93,12 @@ export interface ResultadoViga {
   };
   /** Peralte mínimo para omitir la revisión de deflexiones (cm). */
   peralteMinimo: number;
+  /** Flechas con cargas de servicio (no está en memorias anteriores a esta revisión). */
+  deflexion?: ResultadoFlecha;
+  /** Profundidad del acero de compresión, d' (cm). */
+  dc?: number;
+  /** La flecha excede el límite y el peralte es menor que el mínimo: no pasa. */
+  flechaExcedida?: boolean;
   cumple: boolean;
 }
 
@@ -100,7 +113,7 @@ export function disenarViga(e: EntradaViga): ResultadoViga {
   const apoyo = APOYOS[e.apoyo];
   if (!apoyo) throw new RangeError("Tipo de apoyo desconocido.");
   revisar(e.claro, "El claro", 0, 15);
-  if (!(e.muerta >= 0) || !(e.viva >= 0)) throw new RangeError("Las cargas no pueden ser negativas.");
+  if (!(e.muerta >= 0) || !(e.viva >= 0)) throw new RangeError("Las cargas deben ser números de 0 o más.");
   revisar(e.b, "El ancho de la viga", 10, 150);
   revisar(e.h, "El peralte de la viga", 15, 300);
   revisar(e.recubrimiento, "El recubrimiento", 1, 10);
@@ -158,6 +171,28 @@ export function disenarViga(e: EntradaViga): ResultadoViga {
 
   const sobreMaximo = Math.max(superior.areaColocada, inferior.areaColocada) > aceroMaximo;
 
+  // Flechas con cargas de servicio; el acero de arriba corre todo el claro (portaestribos).
+  const fraccion = e.vivaSostenida ?? FRACCION_VIVA_SOSTENIDA;
+  if (!(fraccion >= 0 && fraccion <= 1)) throw new RangeError("La parte sostenida de la carga viva debe estar entre 0 y 100 %.");
+  const w = (e.muerta + pesoPropio + e.viva) * 10; // kg/cm
+  const dc = e.recubrimiento + est.diametro + v.diametro / 2;
+  const seccion = (As: number, Asc: number) => ({ b: e.b, h: e.h, d, dc, As, Asc });
+  const deflexion = calcularFlecha({
+    caso: e.apoyo === "voladizo" ? "voladizo" : "tramo",
+    extremosContinuos: EXTREMOS_CONTINUOS[e.apoyo],
+    L,
+    w,
+    wSostenida: (e.muerta + pesoPropio + fraccion * e.viva) * 10,
+    mCentro: apoyo.positivo ? (w * L * L) / apoyo.positivo : 0,
+    mApoyo: apoyo.negativo ? (w * L * L) / apoyo.negativo : 0,
+    fc: e.fc,
+    centro: seccion(inferior.areaColocada, superior.areaColocada),
+    apoyo: seccion(superior.areaColocada, inferior.areaColocada),
+    elementosFragiles: e.elementosFragiles ?? false,
+  });
+  const peralteMinimo = L / apoyo.peralte;
+  const flechaFalla = flechaObligatoria(e.h, peralteMinimo, deflexion);
+
   return {
     pesoPropio,
     cargaUltima,
@@ -173,9 +208,66 @@ export function disenarViga(e: EntradaViga): ResultadoViga {
       separacionMaxima,
       cumple: cumpleEstribos,
     },
-    peralteMinimo: L / apoyo.peralte,
-    cumple: cumpleEstribos && !sobreMaximo && superior.cabe && inferior.cabe,
+    peralteMinimo,
+    deflexion,
+    dc,
+    flechaExcedida: flechaFalla,
+    cumple: cumpleEstribos && !sobreMaximo && superior.cabe && inferior.cabe && !flechaFalla,
   };
+}
+
+/** Extremos continuos de cada tipo de apoyo, para promediar la inercia en las flechas. */
+export const EXTREMOS_CONTINUOS: Record<Apoyo, 0 | 1 | 2> = {
+  simple: 0,
+  "un-extremo-continuo": 1,
+  "ambos-continuos": 2,
+  voladizo: 0,
+};
+
+/**
+ * La flecha excedida solo impide la memoria si el peralte es menor que el
+ * mínimo: con el peralte mínimo las NTC permiten omitir el cálculo de
+ * deflexiones, y entonces el exceso se reporta como advertencia.
+ */
+export const flechaObligatoria = (h: number, minimo: number, f: ResultadoFlecha | undefined) =>
+  !!f && !f.cumple && h < minimo - 1e-9;
+
+/**
+ * Longitud que se suma por cada extremo anclado con gancho estándar de 90°
+ * (cm): desarrollo del gancho Ldh = 0.076 db fy / √f'c, sin bajar de 8 db ni
+ * de 15 cm (NTC Concreto, anclaje con dobleces; igual al ACI 318), más la
+ * extensión recta de 12 db después del doblez.
+ */
+export function anclajeGancho(numero: number, fy: number, fc: number) {
+  const v = varilla(numero);
+  if (!v) throw new RangeError("Varilla no disponible.");
+  const ldh = Math.max((0.076 * v.diametro * fy) / Math.sqrt(fc), 8 * v.diametro, 15);
+  return ldh + 12 * v.diametro;
+}
+
+/**
+ * Cuantificación de una viga (sin desperdicio): concreto del claro libre,
+ * varillas longitudinales corridas arriba y abajo con gancho en cada extremo,
+ * estribos a la separación de diseño en todo el claro con ganchos de 135°
+ * (extensión de 6 db, mínimo 7.5 cm), y cimbra de fondo y dos costados de
+ * altura h (sin descontar la losa). No incluye traslapes.
+ */
+export function partidasViga(e: EntradaViga, r: ResultadoViga): Partida[] {
+  const est = varilla(e.estribo);
+  if (!est) throw new RangeError("Varilla no disponible.");
+  const L = e.claro; // m
+  const barra = L + (2 * anclajeGancho(e.varilla, e.fy, e.fc)) / 100; // m por varilla
+  const kg = kgPorMetro(e.varilla);
+  const estribos = Math.ceil((L * 100) / r.cortante.separacion - 1e-9) + 1;
+  const largoEstribo =
+    (2 * (e.b - 2 * e.recubrimiento) + 2 * (e.h - 2 * e.recubrimiento) + 2 * Math.max(6 * est.diametro, 7.5)) / 100;
+  return [
+    { concepto: `Concreto f'c = ${e.fc} kg/cm²`, material: "concreto", cantidad: (e.b / 100) * (e.h / 100) * L },
+    { concepto: `Acero arriba, ${r.superior.cantidad} #${e.varilla}`, material: "acero", cantidad: r.superior.cantidad * barra * kg },
+    { concepto: `Acero abajo, ${r.inferior.cantidad} #${e.varilla}`, material: "acero", cantidad: r.inferior.cantidad * barra * kg },
+    { concepto: `Estribos #${e.estribo} (${estribos} piezas)`, material: "acero", cantidad: estribos * largoEstribo * kgPorMetro(e.estribo) },
+    { concepto: "Cimbra de fondo y costados", material: "cimbra", cantidad: L * (e.b / 100 + (2 * e.h) / 100) },
+  ];
 }
 
 /** Por qué no pasa la viga, en palabras para el usuario. */
@@ -185,5 +277,6 @@ export function problemasViga(r: ResultadoViga): string[] {
   if (Math.max(r.superior.areaColocada, r.inferior.areaColocada) > r.aceroMaximo)
     p.push("el acero pasa del máximo; aumenta el peralte");
   if (!r.superior.cabe || !r.inferior.cabe) p.push("las varillas no caben en una capa; aumenta el ancho o usa varilla más gruesa");
+  if (r.flechaExcedida) p.push("la flecha excede el límite de las NTC; aumenta el peralte");
   return p;
 }

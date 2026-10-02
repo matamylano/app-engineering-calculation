@@ -10,6 +10,7 @@
  * mortero (5.1.2), y factores de carga 1.3 (muerta) y 1.5 (viva) para
  * estructuras del grupo B (3.4).
  */
+import { muroEquivalente, SISTEMAS_PISO, TIPOS_MURO, type SistemaPiso, type TipoMuro } from "./catalogos";
 
 export type Uso =
   | "habitacion"
@@ -59,10 +60,28 @@ export interface Nivel {
   pesoConcreto: number;
   /** Acabados, impermeabilizante, rellenos, plafón e instalaciones (kg/m²). */
   acabados: number;
-  /** Muros divisorios repartidos en el área (kg/m²). */
+  /** Muros divisorios repartidos en el área (kg/m²). Se ignora si viene `muro`. */
   muros: number;
   coladaEnSitio: boolean;
   conMortero: boolean;
+  /** Sistema de piso elegido. Sin él (memorias viejas) es losa maciza capturada a mano. */
+  sistemaPiso?: SistemaPiso;
+  /** Peso propio del sistema de piso aligerado (kg/m²). Si viene, sustituye espesor × peso del concreto. */
+  pesoSistema?: number;
+  /** Muros calculados por tipo, altura y longitud. Sin él se usa `muros` tal cual. */
+  muro?: MuroNivel;
+}
+
+export interface MuroNivel {
+  tipo: TipoMuro;
+  /** Peso por m² de muro (kg/m²). */
+  peso: number;
+  /** Altura de los muros (m). */
+  altura: number;
+  /** Longitud total de muros divisorios en el nivel (m). */
+  longitud: number;
+  /** Área del nivel (m²). */
+  area: number;
 }
 
 export interface Elemento {
@@ -144,13 +163,30 @@ function positivo(valor: number, nombre: string, { cero = false, max = Infinity 
 
 export function cargaNivel(n: Nivel): CargaNivel {
   if (!(n.uso in CARGAS_VIVAS)) throw new RangeError(`Uso desconocido en ${n.nombre}.`);
-  positivo(n.espesorLosa, `El espesor de losa de «${n.nombre}»`, { max: 0.6 });
-  positivo(n.pesoConcreto, `El peso del concreto de «${n.nombre}»`, { max: 3 });
+  if (n.sistemaPiso !== undefined && !(n.sistemaPiso in SISTEMAS_PISO)) {
+    throw new RangeError(`Sistema de piso desconocido en ${n.nombre}.`);
+  }
+  if (n.pesoSistema === undefined) {
+    positivo(n.espesorLosa, `El espesor de losa de «${n.nombre}»`, { max: 0.6 });
+    positivo(n.pesoConcreto, `El peso del concreto de «${n.nombre}»`, { max: 3 });
+  } else {
+    positivo(n.pesoSistema, `El peso del sistema de piso de «${n.nombre}»`, { max: 1500 });
+  }
   positivo(n.acabados, `Los acabados de «${n.nombre}»`, { cero: true, max: 2000 });
-  positivo(n.muros, `Los muros de «${n.nombre}»`, { cero: true, max: 2000 });
-  const losa = n.espesorLosa * n.pesoConcreto * 1000;
+  let muros = n.muros;
+  if (n.muro) {
+    const m = n.muro;
+    if (!(m.tipo in TIPOS_MURO)) throw new RangeError(`Tipo de muro desconocido en ${n.nombre}.`);
+    positivo(m.peso, `El peso de los muros de «${n.nombre}»`, { max: 1000 });
+    positivo(m.altura, `La altura de los muros de «${n.nombre}»`, { max: 10 });
+    positivo(m.longitud, `La longitud de muros de «${n.nombre}»`, { cero: true, max: 10000 });
+    positivo(m.area, `El área de «${n.nombre}»`, { max: 10000 });
+    muros = muroEquivalente(m.peso, m.altura, m.longitud, m.area);
+  }
+  positivo(muros, `Los muros de «${n.nombre}»`, { cero: true, max: 2000 });
+  const losa = n.pesoSistema ?? n.espesorLosa * n.pesoConcreto * 1000;
   const incremento = (n.coladaEnSitio ? INCREMENTO_COLADO : 0) + (n.conMortero ? INCREMENTO_MORTERO : 0);
-  const muerta = losa + incremento + n.acabados + n.muros;
+  const muerta = losa + incremento + n.acabados + muros;
   const viva = CARGAS_VIVAS[n.uso];
   return {
     nombre: n.nombre,
@@ -158,7 +194,7 @@ export function cargaNivel(n: Nivel): CargaNivel {
     losa,
     incremento,
     acabados: n.acabados,
-    muros: n.muros,
+    muros,
     muerta,
     viva,
     servicio: muerta + viva.wm,

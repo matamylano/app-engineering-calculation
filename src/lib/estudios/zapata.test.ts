@@ -1,7 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { FOLIO_VALIDO } from "@/lib/servidor/memorias";
 import { calcularEstudio, estudioDeFolio } from "./registro";
+import { prellenar } from "./prellenar";
 import {
+  CAMPOS_PRELLENAR_ZAPATA,
+  completarFormularioZapata,
   entradaZapata,
   FORMULARIO_ZAPATA_INICIAL,
   leerFormularioZapata,
@@ -54,5 +57,29 @@ describe("formulario de zapata aislada", () => {
   it("reconoce el folio", () => {
     expect(estudioDeFolio("ZAP-20261001-ABCDEF")).toBe("zapata");
     expect(FOLIO_VALIDO.test("ZAP-20261001-ABCDEF")).toBe(true);
+  });
+
+  it("lee memorias viejas sin los campos nuevos y da el mismo resultado", () => {
+    const viejo: Record<string, unknown> = copia();
+    for (const k of ["largo", "momento", "cimbra", "piezas", "precioConcreto", "precioAcero", "precioCimbra"]) delete viejo[k];
+    const f = leerFormularioZapata(viejo)!;
+    expect(f).toMatchObject({ largo: "", momento: "", cimbra: "", piezas: "" });
+    const e = entradaZapata(f);
+    expect(e.largo).toBeUndefined();
+    expect(e.momento).toBeUndefined();
+    const r = calcularEstudio("zapata", viejo);
+    expect(r.ok && "resultado" in r.valor && r.valor.resultado).toMatchObject({ lado: 1.5, largo: 1.5, presiones: null });
+    // En pantalla, el formulario viejo se completa con las opciones apagadas.
+    expect(completarFormularioZapata(viejo as never)).toMatchObject({ largo: "", cimbra: "", piezas: "1" });
+  });
+
+  it("toma el largo y el momento", () => {
+    const e = entradaZapata({ ...copia(), largo: "2", momento: "3" });
+    expect(e).toMatchObject({ largo: 2, momento: 3 });
+  });
+
+  it("se prellena desde la URL", () => {
+    const f = prellenar(copia(), { cargaUltima: "35.5", c1: "40", lado: "3" }, CAMPOS_PRELLENAR_ZAPATA);
+    expect(f).toMatchObject({ cargaUltima: "35.5", c1: "40", lado: "" });
   });
 });

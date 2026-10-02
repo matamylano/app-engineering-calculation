@@ -6,6 +6,8 @@ import { almacen } from "@/lib/servidor/config";
 import { FOLIO_VALIDO } from "@/lib/servidor/memorias";
 import { sesionActual } from "@/lib/servidor/sesion";
 import type { DatosLosa } from "@/lib/servidor/tipos";
+import { CAMPOS_PRELLENAR_LOSA, FORMULARIO_LOSA_INICIAL } from "@/lib/estudios/losa";
+import { prellenar } from "@/lib/estudios/prellenar";
 import DisenoLosa from "./DisenoLosa";
 
 export const metadata: Metadata = { title: "Losa maciza en una dirección" };
@@ -13,7 +15,8 @@ export const metadata: Metadata = { title: "Losa maciza en una dirección" };
 export default async function Page({
   searchParams,
 }: PageProps<"/civil/losa">) {
-  const { folio } = await searchParams;
+  const params = await searchParams;
+  const { folio } = params;
   const sesion = await sesionActual();
   const alm = almacen();
   const creditos = sesion ? await alm.saldo(sesion.id) : null;
@@ -35,6 +38,10 @@ export default async function Page({
     editar = { folio, datos: m.datos as DatosLosa };
   }
 
+  // Valores por la URL; ?folio= manda. Si llega la carga viva, el destino queda como "otro".
+  let prellenado = editar ? undefined : prellenar(FORMULARIO_LOSA_INICIAL, params, CAMPOS_PRELLENAR_LOSA);
+  if (prellenado && prellenado.viva !== FORMULARIO_LOSA_INICIAL.viva) prellenado = { ...prellenado, uso: "" };
+
   return (
     <main className="pagina">
       <Link
@@ -54,7 +61,7 @@ export default async function Page({
       <AvisoValidacion estudio="losa" />
       <DisenoLosa
         folio={editar?.folio}
-        inicial={editar?.datos.formulario}
+        inicial={editar?.datos.formulario ?? prellenado}
         creditos={creditos}
       />
     </main>
