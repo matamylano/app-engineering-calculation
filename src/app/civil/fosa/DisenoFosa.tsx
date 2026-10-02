@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react";
 import { disenarFosa, type ResultadoFosa } from "@/calc/drenaje/fosa";
 import { ErrorText, Field, fmt, ResultRow, Section, Select } from "@/components/form";
+import { Graficas } from "@/components/graficas/Grafica";
 import PieGenerar from "@/components/PieGenerar";
+import { graficasFosa } from "@/lib/graficas/agua";
 import { useGuardarMemoria } from "@/components/useGuardarMemoria";
 import { entradaFosa, FORMULARIO_FOSA_INICIAL, type FormularioFosa } from "@/lib/estudios/fosa";
 import type { ProjectInfo } from "@/lib/estudios/proyecto";
@@ -107,6 +109,8 @@ export default function DisenoFosa({ folio, inicial, creditos }: Props) {
           <ErrorText>{calculo.error}</ErrorText>
         )}
       </Section>
+
+      {calculo.ok && <Graficas especs={graficasFosa(entradaFosa(f), calculo.r)} />}
 
       <PieGenerar folio={folio} creditos={creditos} pendiente={pendiente} error={aviso ?? error} onGenerar={generar} />
     </div>

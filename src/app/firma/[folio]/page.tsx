@@ -25,9 +25,9 @@ export default async function Page({ params }: PageProps<"/firma/[folio]">) {
   if (!m) notFound();
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
+    <main className="pagina">
       <div className="no-print grid gap-4">
-        <Link href="/firma" className="text-sm text-zinc-500 hover:underline">
+        <Link href="/firma" className="volver">
           ← Panel de firma
         </Link>
         <div className="flex flex-wrap items-center gap-3">

@@ -24,6 +24,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="min-h-full flex flex-col">
         <Cabecera />
         {children}
+        <footer className="no-print border-t border-linea">
+          <div className="mx-auto flex w-full max-w-6xl flex-wrap items-center justify-between gap-2 px-4 py-6 text-xs text-zinc-500 sm:px-6">
+            <span>Suite de Ingeniería · Memorias de cálculo para México</span>
+            <span>Los resultados deben revisarse y firmarse por un ingeniero responsable.</span>
+          </div>
+        </footer>
       </body>
     </html>
   );

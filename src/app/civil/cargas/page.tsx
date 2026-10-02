@@ -27,12 +27,12 @@ export default async function Page({ searchParams }: PageProps<"/civil/cargas">)
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
-      <Link href={editar ? `/memorias/${editar.folio}` : "/civil"} className="text-sm text-zinc-500 hover:underline">
+    <main className="pagina">
+      <Link href={editar ? `/memorias/${editar.folio}` : "/civil"} className="volver">
         ← {editar ? `Memoria ${editar.folio}` : "Ingeniería civil"}
       </Link>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight">Bajada de cargas</h1>
-      <p className="mt-2 max-w-2xl text-zinc-600 dark:text-zinc-400">
+      <h1 className="titulo mt-3">Bajada de cargas</h1>
+      <p className="intro mt-3">
         Carga muerta y viva por nivel y la carga que baja por cada columna o muro hasta la cimentación, según las NTC
         de Criterios y Acciones. Si ya tienes la capacidad del suelo, también da el tamaño de cada zapata.
       </p>

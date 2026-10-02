@@ -5,7 +5,9 @@ import { ESPESOR_MINIMO, disenarLosa, type Armado, type ResultadoLosa } from "@/
 import { VARILLAS } from "@/calc/concreto/ntc";
 import { APOYOS, type Apoyo } from "@/calc/concreto/viga";
 import { Check, ErrorText, Field, fmt, ResultRow, Section, Select } from "@/components/form";
+import { Graficas } from "@/components/graficas/Grafica";
 import PieGenerar from "@/components/PieGenerar";
+import { graficasLosa } from "@/lib/graficas/concreto";
 import { useGuardarMemoria } from "@/components/useGuardarMemoria";
 import { entradaLosa, FORMULARIO_LOSA_INICIAL, type FormularioLosa } from "@/lib/estudios/losa";
 import type { ProjectInfo } from "@/lib/estudios/proyecto";
@@ -133,6 +135,8 @@ export default function DisenoLosa({ folio, inicial, creditos }: Props) {
           <ErrorText>{calculo.error}</ErrorText>
         )}
       </Section>
+
+      {calculo.ok && <Graficas especs={graficasLosa(entradaLosa(f), calculo.r)} />}
 
       <PieGenerar folio={folio} creditos={creditos} pendiente={pendiente} error={aviso ?? error} onGenerar={generar} />
     </div>

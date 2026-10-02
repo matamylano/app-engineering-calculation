@@ -1,7 +1,8 @@
+import { graficasColumna } from "@/lib/graficas/concreto";
 import { CUANTIA_MAX_COLUMNA, CUANTIA_MIN_COLUMNA, FR_COMPRESION } from "@/calc/concreto/ntc";
 import { fmt } from "@/components/form";
 import type { DatosColumna, RegistroMemoria } from "@/lib/servidor/tipos";
-import { blank, fechaLarga, H, HojaFirma, Rows } from "../MemoriaComun";
+import { blank, fechaLarga, H, HojaFirma, Rows, AnexoGraficas } from "../MemoriaComun";
 
 export default function MemoriaColumna({ m }: { m: RegistroMemoria }) {
   const { formulario, proyecto: project, entrada: e, resultado: r } = m.datos as DatosColumna;
@@ -11,7 +12,7 @@ export default function MemoriaColumna({ m }: { m: RegistroMemoria }) {
   const estribos = `estribos #${r.estribos.varilla} @ ${fmt(r.estribos.separacion, 1)} cm`;
 
   return (
-    <article className="memoria rounded-lg border border-zinc-300 bg-white p-8 text-black shadow-sm">
+    <article className="memoria rounded-2xl border border-zinc-200 bg-white p-6 text-black shadow-elevada sm:p-10">
       <header className="border-b-2 border-black pb-3">
         <p className="text-xs uppercase tracking-wide">Memoria de cálculo</p>
         <h2 className="text-2xl font-semibold">Columna de concreto {nombre}</h2>
@@ -89,6 +90,8 @@ export default function MemoriaColumna({ m }: { m: RegistroMemoria }) {
         con concreto f&apos;c = {fmt(e.fc, 0)} kg/cm², <b>{armado}</b> y <b>{estribos}</b>, con{" "}
         {fmt(e.recubrimiento, 1)} cm de recubrimiento libre. Resiste la carga axial y el momento de diseño.
       </p>
+
+      <AnexoGraficas especs={graficasColumna(e, r)} />
 
       <HojaFirma folio={folio} project={project} firma={firma} />
     </article>

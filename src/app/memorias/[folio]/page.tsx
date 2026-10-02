@@ -29,9 +29,9 @@ export default async function Page({ params, searchParams }: PageProps<"/memoria
   const propia = m.usuarioId === sesion.id;
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
+    <main className="pagina">
       <div className="no-print grid gap-4">
-        <Link href={propia ? "/cuenta" : "/firma"} className="text-sm text-zinc-500 hover:underline">
+        <Link href={propia ? "/cuenta" : "/firma"} className="volver">
           ← {propia ? "Mi cuenta" : "Panel de firma"}
         </Link>
         <div className="flex flex-wrap items-center gap-3">
@@ -53,7 +53,7 @@ export default async function Page({ params, searchParams }: PageProps<"/memoria
               </Link>
               <span className="text-sm text-zinc-500">«Descargar PDF» abre la impresión; elige «Guardar como PDF».</span>
             </div>
-            <section className="rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
+            <section className="tarjeta p-6">
               <h2 className="text-lg font-semibold">¿No tienes quién firme el estudio?</h2>
               <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
                 Un ingeniero civil con registro revisa tu memoria y, si todo está bien, la firma con su nombre y
@@ -75,7 +75,7 @@ export default async function Page({ params, searchParams }: PageProps<"/memoria
         )}
 
         {propia && m.estado === "en_revision" && (
-          <section className="rounded-lg border border-amber-300 p-5 dark:border-amber-700">
+          <section className="tarjeta p-6 border-amber-300 dark:border-amber-700">
             <h2 className="text-lg font-semibold">El ingeniero está revisando tu memoria</h2>
             <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
               Cuando la apruebe podrás descargarla aquí mismo con sus datos. Si quieres, te avisamos por WhatsApp.
@@ -85,7 +85,7 @@ export default async function Page({ params, searchParams }: PageProps<"/memoria
         )}
 
         {propia && m.estado === "rechazada" && (
-          <section className="rounded-lg border border-red-300 p-5 dark:border-red-800">
+          <section className="tarjeta p-6 border-red-300 dark:border-red-800">
             <h2 className="text-lg font-semibold">El ingeniero pidió cambios</h2>
             <p className="mt-2 whitespace-pre-wrap text-sm">{m.notasRevision}</p>
             <div className="mt-4 flex flex-wrap items-center gap-3">

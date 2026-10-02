@@ -1,8 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import type { FailureMode, FootingShape } from "@/calc/soils/terzaghi";
+import { Graficas } from "@/components/graficas/Grafica";
+import PieGenerar from "@/components/PieGenerar";
+import { graficasSuelos } from "@/lib/graficas/suelos-cargas";
 import { runSoilStudy, type SoilStudyResult } from "@/calc/soils/study";
 import { fromKPa, UNIT_SYSTEMS } from "@/calc/units";
 import { Check, ErrorText, Field, fmt, ResultRow, Section, Select } from "@/components/form";
@@ -58,7 +60,6 @@ export default function SoilStudy({ folio, inicial, creditos }: Props) {
   const result: SoilStudyResult = useMemo(() => runSoilStudy(input), [input]);
   const allOk = result.sucs.ok && result.bearing.ok && result.settlement.ok;
   const st = (kPa: number, d = 2) => `${fmt(fromKPa(kPa, S), d)} ${S}`;
-  const sinCreditos = !folio && creditos !== null && creditos < 1;
 
   const generate = () => {
     setNotice(null);
@@ -192,33 +193,9 @@ export default function SoilStudy({ folio, inicial, creditos }: Props) {
           </div>
         </Section>
 
-        <div className="flex flex-wrap items-center gap-3">
-          <button
-            type="button"
-            onClick={generate}
-            disabled={pending || sinCreditos}
-            className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-          >
-            {pending ? "Guardando…" : folio ? "Guardar cambios en la memoria" : "Generar memoria (1 crédito)"}
-          </button>
-          <span className="text-sm text-zinc-500">
-            {folio
-              ? `Corriges la memoria ${folio}; no gasta otro crédito.`
-              : creditos === null
-                ? "Para generar la memoria entra con tu correo; las cuentas nuevas traen créditos gratis."
-                : `Te ${creditos === 1 ? "queda" : "quedan"} ${creditos} ${creditos === 1 ? "crédito" : "créditos"}.`}
-          </span>
-        </div>
-        {(notice ?? error) && <ErrorText>{notice ?? error}</ErrorText>}
-        {sinCreditos && (
-          <p className="text-sm">
-            Ya no tienes créditos.{" "}
-            <Link href="/cuenta" className="font-medium underline">
-              Compra un paquete
-            </Link>{" "}
-            para seguir generando memorias.
-          </p>
-        )}
+        <Graficas especs={graficasSuelos(input, result, units)} />
+
+        <PieGenerar folio={folio} creditos={creditos} pendiente={pending} error={notice ?? error} onGenerar={generate} />
       </div>
     </div>
   );

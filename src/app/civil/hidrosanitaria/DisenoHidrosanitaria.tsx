@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import { disenarCasa, type ResultadoCasa } from "@/calc/hidrosanitaria/casa";
 import { MUEBLES, type Mueble } from "@/calc/hidrosanitaria/tablas";
 import { ErrorText, Field, fmt, ResultRow, Section } from "@/components/form";
+import { Graficas } from "@/components/graficas/Grafica";
 import PieGenerar from "@/components/PieGenerar";
+import { graficasHidrosanitaria } from "@/lib/graficas/agua";
 import { useGuardarMemoria } from "@/components/useGuardarMemoria";
 import {
   entradaHidrosanitaria,
@@ -138,6 +140,8 @@ export default function DisenoHidrosanitaria({ folio, inicial, creditos }: Props
           <ErrorText>{calculo.error}</ErrorText>
         )}
       </Section>
+
+      {calculo.ok && <Graficas especs={graficasHidrosanitaria(entradaHidrosanitaria(f), calculo.r)} />}
 
       <PieGenerar folio={folio} creditos={creditos} pendiente={pendiente} error={aviso ?? error} onGenerar={generar} />
     </div>

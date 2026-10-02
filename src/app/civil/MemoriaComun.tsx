@@ -1,4 +1,6 @@
 import type { ReactNode } from "react";
+import { Graficas } from "@/components/graficas/Grafica";
+import type { EspecGrafica } from "@/lib/graficas/tipos";
 import type { ProjectInfo } from "@/lib/estudios/proyecto";
 import type { FirmaMemoria } from "@/lib/servidor/tipos";
 
@@ -11,6 +13,17 @@ export const fechaLarga = (iso: string) =>
 
 export function H({ children }: { children: ReactNode }) {
   return <h3 className="mt-6 border-b border-zinc-300 pb-1 text-base font-semibold">{children}</h3>;
+}
+
+/** Anexo con las gráficas del estudio, al final de la memoria. */
+export function AnexoGraficas({ especs }: { especs: EspecGrafica[] }) {
+  if (especs.length === 0) return null;
+  return (
+    <>
+      <H>Anexo. Gráficas</H>
+      <Graficas especs={especs} papel />
+    </>
+  );
 }
 
 export function Rows({ rows }: { rows: [string, string][] }) {

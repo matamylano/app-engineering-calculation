@@ -36,17 +36,17 @@ export default async function Page({
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
+    <main className="pagina">
       <Link
         href={editar ? `/memorias/${editar.folio}` : "/civil"}
-        className="text-sm text-zinc-500 hover:underline"
+        className="volver"
       >
         ← {editar ? `Memoria ${editar.folio}` : "Ingeniería civil"}
       </Link>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+      <h1 className="titulo mt-3">
         Zapata aislada
       </h1>
-      <p className="mt-2 max-w-2xl text-zinc-600 dark:text-zinc-400">
+      <p className="intro mt-3">
         Zapata cuadrada bajo una columna, de concreto reforzado, según las NTC
         de Concreto: tamaño por la capacidad del suelo, revisión de penetración
         y de cortante como viga ancha, y armado por flexión. Toma las cargas de

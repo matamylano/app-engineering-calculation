@@ -1,7 +1,8 @@
+import { graficasSuelos } from "@/lib/graficas/suelos-cargas";
 import type { SoilStudyInput, SoilStudyResult } from "@/calc/soils/study";
 import { fromKNm3, fromKPa, type UnitSystem } from "@/calc/units";
 import { fmt } from "@/components/form";
-import { blank, H, HojaFirma, Rows, ZONA } from "../MemoriaComun";
+import { blank, H, HojaFirma, Rows, ZONA, AnexoGraficas } from "../MemoriaComun";
 import type { ProjectInfo } from "@/lib/estudios/suelos";
 import type { DatosSuelos, FirmaMemoria, RegistroMemoria } from "@/lib/servidor/tipos";
 
@@ -56,7 +57,7 @@ export default function Memoria({ snapshot }: { snapshot: MemoriaSnapshot }) {
   const sg = { corrida: "0.5", cuadrada: "0.4", circular: "0.3" }[input.bearing.shape];
 
   return (
-    <article className="memoria rounded-lg border border-zinc-300 bg-white p-8 text-black shadow-sm">
+    <article className="memoria rounded-2xl border border-zinc-200 bg-white p-6 text-black shadow-elevada sm:p-10">
       <header className="border-b-2 border-black pb-3">
         <p className="text-xs uppercase tracking-wide">Memoria de cálculo</p>
         <h2 className="text-2xl font-semibold">Estudio de mecánica de suelos</h2>
@@ -173,6 +174,8 @@ export default function Memoria({ snapshot }: { snapshot: MemoriaSnapshot }) {
         Los resultados dependen de que los datos proporcionados representen el subsuelo del predio. Si durante la
         excavación se encuentran condiciones distintas, el responsable debe revisar este estudio.
       </p>
+
+      <AnexoGraficas especs={graficasSuelos(input, result, units)} />
 
       <HojaFirma folio={folio} project={project} firma={firma} />
     </article>

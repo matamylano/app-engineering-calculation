@@ -1,10 +1,8 @@
 import type { ReactNode } from "react";
 import type { EstadoMemoria } from "@/lib/servidor/tipos";
 
-export const botonPrimario =
-  "inline-flex items-center justify-center rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300";
-export const botonSecundario =
-  "inline-flex items-center justify-center rounded-md border border-zinc-300 px-4 py-2 text-sm font-medium hover:border-zinc-500 disabled:opacity-50 dark:border-zinc-700";
+export const botonPrimario = "btn-primario";
+export const botonSecundario = "btn-secundario";
 
 export function Boton({
   children,
@@ -23,21 +21,36 @@ export function Boton({
 }
 
 export function Mensajes({ error, aviso }: { error?: string; aviso?: string }) {
-  if (error) return <p className="text-sm text-red-600 dark:text-red-400">{error}</p>;
-  if (aviso) return <p className="text-sm text-emerald-700 dark:text-emerald-400">{aviso}</p>;
+  if (error)
+    return (
+      <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-2.5 text-sm text-red-700 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-300">
+        {error}
+      </p>
+    );
+  if (aviso)
+    return (
+      <p className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm text-emerald-800 dark:border-emerald-900/60 dark:bg-emerald-950/40 dark:text-emerald-300">
+        {aviso}
+      </p>
+    );
   return null;
 }
 
 const ESTADOS: Record<EstadoMemoria, { texto: string; clase: string }> = {
-  borrador: { texto: "Lista para tu firma", clase: "border-zinc-300 text-zinc-700 dark:text-zinc-300" },
-  en_revision: { texto: "En revisión", clase: "border-amber-400 text-amber-700 dark:text-amber-400" },
-  aprobada: { texto: "Aprobada por el ingeniero", clase: "border-emerald-500 text-emerald-700 dark:text-emerald-400" },
-  rechazada: { texto: "Con cambios pedidos", clase: "border-red-400 text-red-700 dark:text-red-400" },
+  borrador: { texto: "Lista para tu firma", clase: "bg-zinc-100 text-zinc-700 ring-zinc-300 dark:bg-zinc-800 dark:text-zinc-300 dark:ring-zinc-700" },
+  en_revision: { texto: "En revisión", clase: "bg-amber-50 text-amber-800 ring-amber-300 dark:bg-amber-950/50 dark:text-amber-300 dark:ring-amber-800" },
+  aprobada: { texto: "Aprobada por el ingeniero", clase: "bg-emerald-50 text-emerald-800 ring-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300 dark:ring-emerald-800" },
+  rechazada: { texto: "Con cambios pedidos", clase: "bg-red-50 text-red-700 ring-red-300 dark:bg-red-950/50 dark:text-red-300 dark:ring-red-800" },
 };
 
 export function EstadoPill({ estado }: { estado: EstadoMemoria }) {
   const e = ESTADOS[estado];
-  return <span className={`rounded-full border px-2 py-0.5 text-xs ${e.clase}`}>{e.texto}</span>;
+  return (
+    <span className={`pastilla ${e.clase}`}>
+      <span className="size-1.5 rounded-full bg-current" aria-hidden />
+      {e.texto}
+    </span>
+  );
 }
 
 export const fechaCorta = (iso: string) =>

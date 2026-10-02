@@ -1,3 +1,4 @@
+import { graficasHidrosanitaria } from "@/lib/graficas/agua";
 import {
   C_HAZEN,
   EFICIENCIA_BOMBA,
@@ -8,7 +9,7 @@ import {
 } from "@/calc/hidrosanitaria/tablas";
 import { fmt } from "@/components/form";
 import type { DatosHidrosanitaria, RegistroMemoria } from "@/lib/servidor/tipos";
-import { blank, fechaLarga, H, HojaFirma, Rows } from "../MemoriaComun";
+import { blank, fechaLarga, H, HojaFirma, Rows, AnexoGraficas } from "../MemoriaComun";
 
 const litros = (x: number) => `${fmt(x, 0)} L`;
 const pieza = (x: { comercial: number; piezas: number }) =>
@@ -19,7 +20,7 @@ export default function MemoriaHidrosanitaria({ m }: { m: RegistroMemoria }) {
   const { firma, folio } = m;
 
   return (
-    <article className="memoria rounded-lg border border-zinc-300 bg-white p-8 text-black shadow-sm">
+    <article className="memoria rounded-2xl border border-zinc-200 bg-white p-6 text-black shadow-elevada sm:p-10">
       <header className="border-b-2 border-black pb-3">
         <p className="text-xs uppercase tracking-wide">Memoria de cálculo</p>
         <h2 className="text-2xl font-semibold">Instalación hidráulica y sanitaria</h2>
@@ -113,6 +114,8 @@ export default function MemoriaHidrosanitaria({ m }: { m: RegistroMemoria }) {
         desde el tinaco es de <b>{r.alimentacion.nominal}</b>. El drenaje sale en <b>{r.drenaje.albanal} mm</b> al{" "}
         {r.drenaje.pendiente} % con registros a cada {r.drenaje.distanciaRegistros} m como máximo.
       </p>
+
+      <AnexoGraficas especs={graficasHidrosanitaria(e, r)} />
 
       <HojaFirma folio={folio} project={project} firma={firma} />
     </article>

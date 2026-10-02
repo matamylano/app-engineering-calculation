@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import { VARILLAS } from "@/calc/concreto/ntc";
 import { APOYOS, disenarViga, problemasViga, type Apoyo, type ResultadoViga } from "@/calc/concreto/viga";
 import { ErrorText, Field, fmt, ResultRow, Section, Select } from "@/components/form";
+import { Graficas } from "@/components/graficas/Grafica";
 import PieGenerar from "@/components/PieGenerar";
+import { graficasViga } from "@/lib/graficas/concreto";
 import { useGuardarMemoria } from "@/components/useGuardarMemoria";
 import type { ProjectInfo } from "@/lib/estudios/proyecto";
 import { entradaViga, FORMULARIO_VIGA_INICIAL, type FormularioViga } from "@/lib/estudios/viga";
@@ -122,6 +124,8 @@ export default function DisenoViga({ folio, inicial, creditos }: Props) {
           <ErrorText>{calculo.error}</ErrorText>
         )}
       </Section>
+
+      {calculo.ok && <Graficas especs={graficasViga(entradaViga(f), calculo.r)} />}
 
       <PieGenerar folio={folio} creditos={creditos} pendiente={pendiente} error={aviso ?? error} onGenerar={generar} />
     </div>

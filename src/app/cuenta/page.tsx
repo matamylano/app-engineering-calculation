@@ -19,11 +19,11 @@ export default async function Page({ searchParams }: PageProps<"/cuenta">) {
   const base = PAQUETES[0];
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
+    <main className="pagina">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <h1 className="text-3xl font-semibold tracking-tight">Mi cuenta</h1>
+        <h1 className="titulo">Mi cuenta</h1>
         <form action={accionSalir}>
-          <button type="submit" className="text-sm text-zinc-500 hover:underline">
+          <button type="submit" className="volver">
             Salir ({sesion.email})
           </button>
         </form>
@@ -36,35 +36,47 @@ export default async function Page({ searchParams }: PageProps<"/cuenta">) {
         />
       </div>
 
-      <section className="mt-6 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
+      <section className="mt-6 tarjeta p-6">
         <h2 className="text-lg font-semibold">Créditos</h2>
         <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
           Tienes <b className="text-zinc-900 dark:text-zinc-100">{saldo}</b> {saldo === 1 ? "crédito" : "créditos"}.
           Cada memoria generada usa uno; corregirla no cuesta otro.
         </p>
         <div className="mt-4 grid gap-4 sm:grid-cols-3">
-          {PAQUETES.map((p) => {
+          {PAQUETES.map((p, i) => {
             const unitario = p.centavos / p.creditos;
             const ahorro = Math.round((1 - unitario / (base.centavos / base.creditos)) * 100);
+            const destacado = i === 1;
             return (
-              <form key={p.id} action={accionComprar} className="grid gap-2 rounded-lg border border-zinc-200 p-4 dark:border-zinc-800">
+              <form
+                key={p.id}
+                action={accionComprar}
+                className={`relative grid gap-2 rounded-2xl border p-5 ${
+                  destacado
+                    ? "border-marca-300 bg-marca-50/60 ring-2 ring-marca-500/20 dark:border-marca-800 dark:bg-marca-950/30"
+                    : "border-linea bg-superficie"
+                }`}
+              >
+                {destacado && (
+                  <span className="pastilla absolute -top-2.5 right-4 bg-marca-600 text-white ring-marca-600">El más elegido</span>
+                )}
                 <input type="hidden" name="tipo" value="creditos" />
                 <input type="hidden" name="paquete" value={p.id} />
                 <p className="text-2xl font-semibold">{p.creditos} créditos</p>
                 <p className="text-sm text-zinc-600 dark:text-zinc-400">
                   {pesos(p.centavos)} · {pesos(unitario)} por memoria{ahorro > 0 && ` · ahorras ${ahorro} %`}
                 </p>
-                <Boton secundario>Comprar</Boton>
+                <Boton secundario={!destacado}>Comprar</Boton>
               </form>
             );
           })}
         </div>
       </section>
 
-      <section className="mt-6 rounded-lg border border-zinc-200 p-5 dark:border-zinc-800">
+      <section className="mt-6 tarjeta p-6">
         <div className="flex items-baseline justify-between">
           <h2 className="text-lg font-semibold">Mis memorias</h2>
-          <Link href="/civil" className="text-sm font-medium underline">
+          <Link href="/civil" className="enlace text-sm">
             Nuevo estudio
           </Link>
         </div>

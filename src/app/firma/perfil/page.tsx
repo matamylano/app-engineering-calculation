@@ -14,12 +14,12 @@ export default async function Page() {
   const perfil = await almacen().perfilFirmante(sesion.id);
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
-      <Link href="/firma" className="text-sm text-zinc-500 hover:underline">
+    <main className="pagina">
+      <Link href="/firma" className="volver">
         ← Panel de firma
       </Link>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight">Mi firma y sello</h1>
-      <p className="mt-2 max-w-2xl text-zinc-600 dark:text-zinc-400">
+      <h1 className="titulo mt-3">Mi firma y sello</h1>
+      <p className="intro mt-3">
         Se ponen solos en cada memoria que apruebes, junto con tu nombre, cédula y registro. Las memorias que ya
         aprobaste no cambian.
       </p>

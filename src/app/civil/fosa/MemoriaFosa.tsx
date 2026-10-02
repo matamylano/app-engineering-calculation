@@ -1,14 +1,15 @@
+import { graficasFosa } from "@/lib/graficas/agua";
 import { ANCHO_ZANJA, LARGO_MAXIMO_ZANJA, LODO_FRESCO } from "@/calc/drenaje/tablas";
 import { fmt } from "@/components/form";
 import type { DatosFosa, RegistroMemoria } from "@/lib/servidor/tipos";
-import { blank, fechaLarga, H, HojaFirma, Rows } from "../MemoriaComun";
+import { blank, fechaLarga, H, HojaFirma, Rows, AnexoGraficas } from "../MemoriaComun";
 
 export default function MemoriaFosa({ m }: { m: RegistroMemoria }) {
   const { proyecto: project, entrada: e, resultado: r } = m.datos as DatosFosa;
   const { firma, folio } = m;
 
   return (
-    <article className="memoria rounded-lg border border-zinc-300 bg-white p-8 text-black shadow-sm">
+    <article className="memoria rounded-2xl border border-zinc-200 bg-white p-6 text-black shadow-elevada sm:p-10">
       <header className="border-b-2 border-black pb-3">
         <p className="text-xs uppercase tracking-wide">Memoria de cálculo</p>
         <h2 className="text-2xl font-semibold">Fosa séptica</h2>
@@ -86,6 +87,8 @@ export default function MemoriaFosa({ m }: { m: RegistroMemoria }) {
         <b>{fmt(r.campo.longitud, 1)} m de zanja</b>. Los lodos se retiran{" "}
         {e.limpieza === 1 ? "cada año" : `cada ${e.limpieza} años`}.
       </p>
+
+      <AnexoGraficas especs={graficasFosa(e, r)} />
 
       <HojaFirma folio={folio} project={project} firma={firma} />
     </article>

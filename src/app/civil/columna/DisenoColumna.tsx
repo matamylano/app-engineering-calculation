@@ -5,7 +5,9 @@ import Link from "next/link";
 import { disenarColumna, type ResultadoColumna } from "@/calc/concreto/columna";
 import { VARILLAS } from "@/calc/concreto/ntc";
 import { ErrorText, Field, fmt, ResultRow, Section, Select } from "@/components/form";
+import { Graficas } from "@/components/graficas/Grafica";
 import PieGenerar from "@/components/PieGenerar";
+import { graficasColumna } from "@/lib/graficas/concreto";
 import { useGuardarMemoria } from "@/components/useGuardarMemoria";
 import { entradaColumna, FORMULARIO_COLUMNA_INICIAL, type FormularioColumna } from "@/lib/estudios/columna";
 import type { ProjectInfo } from "@/lib/estudios/proyecto";
@@ -65,7 +67,7 @@ export default function DisenoColumna({ folio, inicial, creditos }: Props) {
         </div>
         <p className="mt-2 text-sm text-zinc-500">
           Pu sale de tu{" "}
-          <Link href="/civil/cargas" className="underline">
+          <Link href="/civil/cargas" className="enlace">
             bajada de cargas
           </Link>
           . Mu es el momento mayor en los extremos, en la dirección del lado h; si no lo tienes, se usa la
@@ -118,6 +120,8 @@ export default function DisenoColumna({ folio, inicial, creditos }: Props) {
           <ErrorText>{calculo.error}</ErrorText>
         )}
       </Section>
+
+      {calculo.ok && <Graficas especs={graficasColumna(entradaColumna(f), calculo.r)} />}
 
       <PieGenerar folio={folio} creditos={creditos} pendiente={pendiente} error={aviso ?? error} onGenerar={generar} />
     </div>

@@ -36,7 +36,7 @@ export default function Revision({ folio, datos }: { folio: string; datos?: Dato
         <Boton pendiente={aprobando}>Aprobar y congelar</Boton>
       </form>
 
-      <form action={rechazar} className="grid content-start gap-3 rounded-lg border border-red-300 p-5 dark:border-red-800">
+      <form action={rechazar} className="grid content-start gap-3 tarjeta p-6 border-red-300 dark:border-red-800">
         <h2 className="text-lg font-semibold">Pedir cambios</h2>
         <input type="hidden" name="folio" value={folio} />
         <label className="grid gap-1 text-sm">

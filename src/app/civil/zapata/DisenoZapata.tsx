@@ -12,7 +12,9 @@ import {
   Section,
   Select,
 } from "@/components/form";
+import { Graficas } from "@/components/graficas/Grafica";
 import PieGenerar from "@/components/PieGenerar";
+import { graficasZapata } from "@/lib/graficas/concreto";
 import { useGuardarMemoria } from "@/components/useGuardarMemoria";
 import type { ProjectInfo } from "@/lib/estudios/proyecto";
 import {
@@ -157,11 +159,11 @@ export default function DisenoZapata({ folio, inicial, creditos }: Props) {
         </div>
         <p className="mt-2 text-sm text-zinc-500">
           Las cargas salen de tu{" "}
-          <Link href="/civil/cargas" className="underline">
+          <Link href="/civil/cargas" className="enlace">
             bajada de cargas
           </Link>{" "}
           y qa de tu{" "}
-          <Link href="/civil/suelos" className="underline">
+          <Link href="/civil/suelos" className="enlace">
             estudio de suelos
           </Link>
           .
@@ -285,6 +287,8 @@ export default function DisenoZapata({ folio, inicial, creditos }: Props) {
           <ErrorText>{calculo.error}</ErrorText>
         )}
       </Section>
+
+      {calculo.ok && <Graficas especs={graficasZapata(entradaZapata(f), calculo.r)} />}
 
       <PieGenerar folio={folio} creditos={creditos} pendiente={pendiente} error={aviso ?? error} onGenerar={generar} />
     </div>

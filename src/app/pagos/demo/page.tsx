@@ -36,7 +36,7 @@ export default async function Page({ searchParams }: PageProps<"/pagos/demo">) {
         <input type="hidden" name="folio" value={folio} />
         <input type="hidden" name="centavos" value={compra.centavos} />
         <Boton>Simular pago</Boton>
-        <Link href={tipo === "firma" ? `/memorias/${folio}` : "/cuenta"} className="text-sm text-zinc-500 hover:underline">
+        <Link href={tipo === "firma" ? `/memorias/${folio}` : "/cuenta"} className="volver">
           Cancelar
         </Link>
       </form>

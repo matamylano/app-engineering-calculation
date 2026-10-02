@@ -2,6 +2,10 @@
 
 Suite web de estudios de ingeniería con memoria de cálculo lista para firma. Hecha con Next.js y TypeScript, lista para desplegar en Vercel.
 
+## Gráficas
+
+Cada estudio dibuja sus gráficas en pantalla y las agrega a la memoria como anexo: diagramas de momento y cortante (viga y losa), diagrama de interacción (columna), presión contra lado (zapata), capacidad admisible contra ancho y términos de Terzaghi (suelos), cargas por elemento, curva de Hunter, prueba de bombeo en escala semilogarítmica, capacidad de tubería contra gasto pluvial y volumen de fosa contra habitantes. Se describen en `src/lib/graficas/` (sin dibujo, con pruebas) y se pintan con `src/components/graficas/Grafica.tsx` en SVG.
+
 ## Paquetes
 
 | Paquete | Estudio | Estado |

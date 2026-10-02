@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Availability } from "@/calc/suite";
+import Icono from "./Icono";
 import StatusPill from "./StatusPill";
 
 interface Props {
@@ -8,37 +9,55 @@ interface Props {
   status: Availability;
   href?: string;
   enValidacion?: boolean;
+  /** Nombre del ícono (el slug del paquete o estudio). */
+  icono?: string;
 }
 
 /** Tarjeta de paquete o estudio. Solo es enlace si está disponible. */
-export default function CatalogCard({ title, description, status, href, enValidacion }: Props) {
+export default function CatalogCard({ title, description, status, href, enValidacion, icono }: Props) {
+  const activa = status === "disponible" && href;
   const body = (
     <>
       <div className="flex items-start justify-between gap-3">
-        <h2 className="text-lg font-semibold">{title}</h2>
+        <span
+          className={`grid size-11 shrink-0 place-items-center rounded-xl ${
+            activa
+              ? "bg-marca-50 text-marca-600 ring-1 ring-marca-100 dark:bg-marca-950/60 dark:text-marca-300 dark:ring-marca-900"
+              : "bg-zinc-100 text-zinc-400 dark:bg-zinc-800"
+          }`}
+        >
+          <Icono nombre={icono ?? "paquete"} className="size-6" />
+        </span>
         <StatusPill status={status} />
       </div>
-      <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">{description}</p>
+      <h2 className="mt-4 text-lg font-semibold tracking-tight">{title}</h2>
+      <p className="mt-1 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">{description}</p>
       {enValidacion && status === "disponible" && (
-        <p className="mt-2 text-xs font-medium text-amber-700 dark:text-amber-400">En validación por el ingeniero responsable</p>
+        <p className="mt-3 flex items-center gap-1.5 text-xs font-medium text-amber-700 dark:text-amber-400">
+          <span className="size-1.5 rounded-full bg-amber-500" aria-hidden />
+          En validación por el ingeniero responsable
+        </p>
+      )}
+      {activa && (
+        <span className="mt-4 inline-flex items-center gap-1 text-sm font-semibold text-marca-600 dark:text-marca-300">
+          Abrir
+          <Icono nombre="flecha" className="size-4 transition group-hover:translate-x-0.5" />
+        </span>
       )}
     </>
   );
-  if (status === "disponible" && href) {
+  if (activa) {
     return (
       <Link
         href={href}
-        className="block h-full rounded-lg border border-zinc-200 p-5 transition hover:border-zinc-500 dark:border-zinc-800 dark:hover:border-zinc-500"
+        className="tarjeta group flex h-full flex-col p-5 transition hover:-translate-y-0.5 hover:border-marca-300 hover:shadow-elevada dark:hover:border-marca-800"
       >
         {body}
       </Link>
     );
   }
   return (
-    <div
-      aria-disabled="true"
-      className="h-full rounded-lg border border-dashed border-zinc-300 p-5 opacity-70 dark:border-zinc-700"
-    >
+    <div aria-disabled="true" className="flex h-full flex-col rounded-2xl border border-dashed border-zinc-300 p-5 opacity-75 dark:border-zinc-700">
       {body}
     </div>
   );

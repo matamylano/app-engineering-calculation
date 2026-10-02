@@ -25,13 +25,13 @@ export default async function Page({ searchParams }: PageProps<"/civil/suelos">)
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
+    <main className="pagina">
       <div className="no-print">
-        <Link href={editar ? `/memorias/${editar.folio}` : "/civil"} className="text-sm text-zinc-500 hover:underline">
+        <Link href={editar ? `/memorias/${editar.folio}` : "/civil"} className="volver">
           ← {editar ? `Memoria ${editar.folio}` : "Ingeniería civil"}
         </Link>
-        <h1 className="mt-2 text-3xl font-semibold tracking-tight">Estudio de mecánica de suelos</h1>
-        <p className="mt-2 max-w-2xl text-zinc-600 dark:text-zinc-400">
+        <h1 className="titulo mt-3">Estudio de mecánica de suelos</h1>
+        <p className="intro mt-3">
           Captura los resultados de laboratorio y de campo. Los cálculos se actualizan al escribir; al final genera
           la memoria lista para firma.
         </p>

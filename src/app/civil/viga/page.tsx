@@ -36,17 +36,17 @@ export default async function Page({
   }
 
   return (
-    <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-10">
+    <main className="pagina">
       <Link
         href={editar ? `/memorias/${editar.folio}` : "/civil"}
-        className="text-sm text-zinc-500 hover:underline"
+        className="volver"
       >
         ← {editar ? `Memoria ${editar.folio}` : "Ingeniería civil"}
       </Link>
-      <h1 className="mt-2 text-3xl font-semibold tracking-tight">
+      <h1 className="titulo mt-3">
         Viga de concreto
       </h1>
-      <p className="mt-2 max-w-2xl text-zinc-600 dark:text-zinc-400">
+      <p className="intro mt-3">
         Viga rectangular con carga uniforme, según las NTC de Concreto: momentos y cortante por el tipo de apoyo,
         acero arriba y abajo, y estribos. El peso propio se suma solo.
       </p>

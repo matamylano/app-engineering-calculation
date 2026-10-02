@@ -3,7 +3,9 @@
 import { useMemo, useState } from "react";
 import { disenarPozo, type ResultadoPozo } from "@/calc/pozos/pozo";
 import { ErrorText, Field, fmt, inputClass, ResultRow, Section } from "@/components/form";
+import { Graficas } from "@/components/graficas/Grafica";
 import PieGenerar from "@/components/PieGenerar";
+import { graficasPozo } from "@/lib/graficas/agua";
 import { useGuardarMemoria } from "@/components/useGuardarMemoria";
 import { entradaPozo, FORMULARIO_POZO_INICIAL, MAX_LECTURAS, type FormularioPozo, type LecturaForm } from "@/lib/estudios/pozo";
 import type { ProjectInfo } from "@/lib/estudios/proyecto";
@@ -147,6 +149,8 @@ export default function DisenoPozo({ folio, inicial, creditos }: Props) {
           <ErrorText>{calculo.error}</ErrorText>
         )}
       </Section>
+
+      {calculo.ok && <Graficas especs={graficasPozo(entradaPozo(f), calculo.r)} />}
 
       <PieGenerar folio={folio} creditos={creditos} pendiente={pendiente} error={aviso ?? error} onGenerar={generar} />
     </div>

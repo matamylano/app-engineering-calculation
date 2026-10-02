@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { ErrorText } from "./form";
+import Icono from "./Icono";
 
 interface Props {
   folio?: string;
@@ -13,34 +14,32 @@ interface Props {
 export default function PieGenerar({ folio, creditos, pendiente, error, onGenerar }: Props) {
   const sinCreditos = !folio && creditos !== null && creditos < 1;
   return (
-    <>
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={onGenerar}
-          disabled={pendiente || sinCreditos}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-        >
-          {pendiente ? "Guardando…" : folio ? "Guardar cambios en la memoria" : "Generar memoria (1 crédito)"}
-        </button>
-        <span className="text-sm text-zinc-500">
-          {folio
-            ? `Corriges la memoria ${folio}; no gasta otro crédito.`
-            : creditos === null
-              ? "Para generar la memoria entra con tu correo; las cuentas nuevas traen créditos gratis."
-              : `Te ${creditos === 1 ? "queda" : "quedan"} ${creditos} ${creditos === 1 ? "crédito" : "créditos"}.`}
-        </span>
-      </div>
-      {error && <ErrorText>{error}</ErrorText>}
+    <div className="tarjeta no-print sticky bottom-4 z-20 flex flex-wrap items-center gap-x-4 gap-y-2 border-marca-200 p-4 shadow-elevada dark:border-marca-900">
+      <button type="button" onClick={onGenerar} disabled={pendiente || sinCreditos} className="btn-primario px-5">
+        <Icono nombre="documento" className="size-4" />
+        {pendiente ? "Guardando…" : folio ? "Guardar cambios en la memoria" : "Generar memoria (1 crédito)"}
+      </button>
+      <span className="text-sm text-zinc-600 dark:text-zinc-400">
+        {folio
+          ? `Corriges la memoria ${folio}; no gasta otro crédito.`
+          : creditos === null
+            ? "Para generar la memoria entra con tu correo; las cuentas nuevas traen créditos gratis."
+            : `Te ${creditos === 1 ? "queda" : "quedan"} ${creditos} ${creditos === 1 ? "crédito" : "créditos"}.`}
+      </span>
+      {error && (
+        <div className="w-full">
+          <ErrorText>{error}</ErrorText>
+        </div>
+      )}
       {sinCreditos && (
-        <p className="text-sm">
+        <p className="w-full text-sm">
           Ya no tienes créditos.{" "}
-          <Link href="/cuenta" className="font-medium underline">
+          <Link href="/cuenta" className="enlace">
             Compra un paquete
           </Link>{" "}
           para seguir generando memorias.
         </p>
       )}
-    </>
+    </div>
   );
 }

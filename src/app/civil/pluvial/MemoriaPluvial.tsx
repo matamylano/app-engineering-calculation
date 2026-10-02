@@ -1,7 +1,8 @@
+import { graficasPluvial } from "@/lib/graficas/agua";
 import { LLENADO_MAXIMO, MANNING_PVC, SUPERFICIES, type Superficie } from "@/calc/drenaje/tablas";
 import { fmt } from "@/components/form";
 import type { DatosPluvial, RegistroMemoria } from "@/lib/servidor/tipos";
-import { blank, fechaLarga, H, HojaFirma, Rows } from "../MemoriaComun";
+import { blank, fechaLarga, H, HojaFirma, Rows, AnexoGraficas } from "../MemoriaComun";
 
 export default function MemoriaPluvial({ m }: { m: RegistroMemoria }) {
   const { proyecto: project, entrada: e, resultado: r } = m.datos as DatosPluvial;
@@ -9,7 +10,7 @@ export default function MemoriaPluvial({ m }: { m: RegistroMemoria }) {
   const superficies = (Object.keys(SUPERFICIES) as Superficie[]).filter((k) => e.areas[k] > 0);
 
   return (
-    <article className="memoria rounded-lg border border-zinc-300 bg-white p-8 text-black shadow-sm">
+    <article className="memoria rounded-2xl border border-zinc-200 bg-white p-6 text-black shadow-elevada sm:p-10">
       <header className="border-b-2 border-black pb-3">
         <p className="text-xs uppercase tracking-wide">Memoria de cálculo</p>
         <h2 className="text-2xl font-semibold">Drenaje pluvial</h2>
@@ -90,6 +91,8 @@ export default function MemoriaPluvial({ m }: { m: RegistroMemoria }) {
         ) : null}
         .
       </p>
+
+      <AnexoGraficas especs={graficasPluvial(e, r)} />
 
       <HojaFirma folio={folio} project={project} firma={firma} />
     </article>

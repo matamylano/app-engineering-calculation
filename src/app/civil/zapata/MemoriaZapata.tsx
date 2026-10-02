@@ -1,3 +1,4 @@
+import { graficasZapata } from "@/lib/graficas/concreto";
 import {
   FR_CORTANTE,
   FR_FLEXION,
@@ -6,7 +7,7 @@ import {
 } from "@/calc/concreto/ntc";
 import { fmt } from "@/components/form";
 import type { DatosZapata, RegistroMemoria } from "@/lib/servidor/tipos";
-import { blank, fechaLarga, H, HojaFirma, Rows } from "../MemoriaComun";
+import { blank, fechaLarga, H, HojaFirma, Rows, AnexoGraficas } from "../MemoriaComun";
 
 const cumple = (ok: boolean) => (ok ? "Cumple" : "No cumple");
 
@@ -22,7 +23,7 @@ export default function MemoriaZapata({ m }: { m: RegistroMemoria }) {
   const volado = (r.lado * 100 - Math.min(e.c1, e.c2)) / 2;
 
   return (
-    <article className="memoria rounded-lg border border-zinc-300 bg-white p-8 text-black shadow-sm">
+    <article className="memoria rounded-2xl border border-zinc-200 bg-white p-6 text-black shadow-elevada sm:p-10">
       <header className="border-b-2 border-black pb-3">
         <p className="text-xs uppercase tracking-wide">Memoria de cálculo</p>
         <h2 className="text-2xl font-semibold">
@@ -144,6 +145,8 @@ export default function MemoriaZapata({ m }: { m: RegistroMemoria }) {
         penetración, cortante y flexión. Se recomienda colar sobre una plantilla
         de concreto pobre de 5 cm.
       </p>
+
+      <AnexoGraficas especs={graficasZapata(e, r)} />
 
       <HojaFirma folio={folio} project={project} firma={firma} />
     </article>

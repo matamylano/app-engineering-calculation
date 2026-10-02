@@ -2,6 +2,9 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { Graficas } from "@/components/graficas/Grafica";
+import PieGenerar from "@/components/PieGenerar";
+import { graficasCargas } from "@/lib/graficas/suelos-cargas";
 import { bajadaDeCargas, CARGAS_VIVAS, type ResultadoBajada, type Uso } from "@/calc/cargas/bajada";
 import { Check, ErrorText, Field, fmt, inputClass, Section, Select } from "@/components/form";
 import { useGuardarMemoria } from "@/components/useGuardarMemoria";
@@ -50,7 +53,6 @@ export default function BajadaCargas({ folio, inicial, creditos }: Props) {
     }
   }, [f]);
 
-  const sinCreditos = !folio && creditos !== null && creditos < 1;
   const generar = () => {
     setAviso(null);
     if (!calculo.ok) {
@@ -169,7 +171,7 @@ export default function BajadaCargas({ folio, inicial, creditos }: Props) {
         </div>
         <p className="mt-2 text-sm text-zinc-500">
           ¿No tienes qa?{" "}
-          <Link href="/civil/suelos" className="underline">
+          <Link href="/civil/suelos" className="enlace">
             Haz el estudio de suelos
           </Link>{" "}
           o deja el campo vacío.
@@ -207,33 +209,9 @@ export default function BajadaCargas({ folio, inicial, creditos }: Props) {
         )}
       </Section>
 
-      <div className="flex flex-wrap items-center gap-3">
-        <button
-          type="button"
-          onClick={generar}
-          disabled={pendiente || sinCreditos}
-          className="rounded-md bg-zinc-900 px-4 py-2 text-sm font-medium text-white hover:bg-zinc-700 disabled:opacity-50 dark:bg-zinc-100 dark:text-zinc-900 dark:hover:bg-zinc-300"
-        >
-          {pendiente ? "Guardando…" : folio ? "Guardar cambios en la memoria" : "Generar memoria (1 crédito)"}
-        </button>
-        <span className="text-sm text-zinc-500">
-          {folio
-            ? `Corriges la memoria ${folio}; no gasta otro crédito.`
-            : creditos === null
-              ? "Para generar la memoria entra con tu correo; las cuentas nuevas traen créditos gratis."
-              : `Te ${creditos === 1 ? "queda" : "quedan"} ${creditos} ${creditos === 1 ? "crédito" : "créditos"}.`}
-        </span>
-      </div>
-      {(aviso ?? error) && <ErrorText>{aviso ?? error}</ErrorText>}
-      {sinCreditos && (
-        <p className="text-sm">
-          Ya no tienes créditos.{" "}
-          <Link href="/cuenta" className="font-medium underline">
-            Compra un paquete
-          </Link>{" "}
-          para seguir generando memorias.
-        </p>
-      )}
+      {calculo.ok && <Graficas especs={graficasCargas(entradaCargas(f), calculo.r)} />}
+
+      <PieGenerar folio={folio} creditos={creditos} pendiente={pendiente} error={aviso ?? error} onGenerar={generar} />
     </div>
   );
 }

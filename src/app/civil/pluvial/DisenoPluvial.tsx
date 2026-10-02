@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import { disenarPluvial, type ResultadoPluvial } from "@/calc/drenaje/pluvial";
 import { SUPERFICIES, type Superficie } from "@/calc/drenaje/tablas";
 import { ErrorText, Field, fmt, ResultRow, Section } from "@/components/form";
+import { Graficas } from "@/components/graficas/Grafica";
 import PieGenerar from "@/components/PieGenerar";
+import { graficasPluvial } from "@/lib/graficas/agua";
 import { useGuardarMemoria } from "@/components/useGuardarMemoria";
 import { entradaPluvial, FORMULARIO_PLUVIAL_INICIAL, type FormularioPluvial } from "@/lib/estudios/pluvial";
 import type { ProjectInfo } from "@/lib/estudios/proyecto";
@@ -127,6 +129,8 @@ export default function DisenoPluvial({ folio, inicial, creditos }: Props) {
           <ErrorText>{calculo.error}</ErrorText>
         )}
       </Section>
+
+      {calculo.ok && <Graficas especs={graficasPluvial(entradaPluvial(f), calculo.r)} />}
 
       <PieGenerar folio={folio} creditos={creditos} pendiente={pendiente} error={aviso ?? error} onGenerar={generar} />
     </div>
