@@ -170,3 +170,8 @@ body {
     break-inside: avoid;
   }
 }
+
+/* Vista previa del cálculo en la página del estudio: sin hoja de firma. */
+.vista-previa .hoja-firma {
+  display: none;
+}

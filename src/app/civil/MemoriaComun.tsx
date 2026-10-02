@@ -49,7 +49,7 @@ export function HojaFirma({ folio, project, firma }: { folio: string; project: P
     ? { nombre: firma.nombre, cedula: firma.cedula, registro: firma.registro }
     : { nombre: project.responsable, cedula: project.cedula, registro: project.registro };
   return (
-        <section className="page-break mt-10">
+        <section className="hoja-firma page-break mt-10">
           <H>Responsable</H>
           <div className="mt-6 grid gap-8 sm:grid-cols-2">
             <div className="text-sm">
