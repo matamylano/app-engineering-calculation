@@ -3,8 +3,16 @@
 import { useMemo, useState } from "react";
 import Link from "next/link";
 import { VARILLAS } from "@/calc/concreto/ntc";
-import { cuantificarZapata, disenarZapata, type ResultadoZapata } from "@/calc/concreto/zapata";
-import { preciosDeFormulario, presupuesto, type Presupuesto } from "@/calc/obra/cuantificacion";
+import {
+  cuantificarZapata,
+  disenarZapata,
+  type ResultadoZapata,
+} from "@/calc/concreto/zapata";
+import {
+  preciosDeFormulario,
+  presupuesto,
+  type Presupuesto,
+} from "@/calc/obra/cuantificacion";
 import CamposObra from "@/components/obra/CamposObra";
 import TablaPresupuesto from "@/components/obra/TablaPresupuesto";
 import {
@@ -17,6 +25,11 @@ import {
 } from "@/components/form";
 import { Graficas } from "@/components/graficas/Grafica";
 import PieGenerar from "@/components/PieGenerar";
+import PasoAPaso from "@/components/revision/PasoAPaso";
+import { EjemplosPrueba, PanelRevision } from "@/components/revision/Revision";
+import { registroPrevio } from "@/lib/revision/previa";
+import { EJEMPLOS_ZAPATA, revisionesZapata } from "@/lib/revision/zapata";
+import MemoriaZapata from "./MemoriaZapata";
 import { graficasZapataCompletas } from "@/lib/graficas/zapata";
 import { useGuardarMemoria } from "@/components/useGuardarMemoria";
 import type { ProjectInfo } from "@/lib/estudios/proyecto";
@@ -100,8 +113,22 @@ export default function DisenoZapata({ folio, inicial, creditos }: Props) {
     guardar(f);
   };
 
+  const veredicto = calculo.ok
+    ? {
+        cumple: calculo.r.cumple,
+        texto: calculo.r.cumple
+          ? resumenZapata(calculo.r, f.h)
+          : noPasa(calculo.r.problemas[0]),
+      }
+    : { cumple: false, texto: calculo.error };
+
   return (
     <div className="mt-8 grid gap-6">
+      <EjemplosPrueba
+        ejemplos={EJEMPLOS_ZAPATA}
+        onUsar={(v) => setF((p) => ({ ...p, ...v }))}
+      />
+
       <Section title="Datos de la obra">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
@@ -269,7 +296,30 @@ export default function DisenoZapata({ folio, inicial, creditos }: Props) {
       </Section>
 
       {calculo.ok && (
-        <Graficas especs={graficasZapataCompletas(entradaZapata(f), calculo.r)} />
+        <PanelRevision
+          revisiones={revisionesZapata(entradaZapata(f), calculo.r)}
+        />
+      )}
+
+      {calculo.ok && (
+        <Graficas
+          especs={graficasZapataCompletas(entradaZapata(f), calculo.r)}
+        />
+      )}
+
+      {calculo.ok && (
+        <PasoAPaso>
+          {() => (
+            <MemoriaZapata
+              m={registroPrevio("zapata", {
+                formulario: f,
+                proyecto: f.project,
+                entrada: entradaZapata(f),
+                resultado: calculo.r,
+              })}
+            />
+          )}
+        </PasoAPaso>
       )}
 
       <Section title="Cuantificación y costo">
@@ -304,12 +354,44 @@ export default function DisenoZapata({ folio, inicial, creditos }: Props) {
         </div>
       </Section>
 
-      <PieGenerar folio={folio} creditos={creditos} pendiente={pendiente} error={aviso ?? error} onGenerar={generar} />
+      <PieGenerar
+        folio={folio}
+        creditos={creditos}
+        pendiente={pendiente}
+        error={aviso ?? error}
+        onGenerar={generar}
+        veredicto={veredicto}
+      />
     </div>
   );
 }
 
-function Resultados({ r, h, qa }: { r: ResultadoZapata; h: number; qa: number }) {
+/** El primer problema del motor, sin repetir «no pasa». */
+const noPasa = (p = "revisa los datos") =>
+  p.startsWith("no pasa")
+    ? `${p[0].toUpperCase()}${p.slice(1)}.`
+    : `No pasa: ${p}.`;
+
+/** Medidas y armado en una línea, para el pie. */
+function resumenZapata(r: ResultadoZapata, h: string) {
+  const { largo: l, ancho: a } = r.direcciones;
+  const armado = (x: typeof l) =>
+    `${x.armado.cantidad} #${x.armado.varilla} @ ${fmt(x.armado.separacion, 1)} cm`;
+  const medidas = `Zapata de ${fmt(r.lado)} × ${fmt(r.largo)} m, h = ${h} cm`;
+  return r.cuadrada && !r.presiones
+    ? `${medidas}, parrilla ${armado(l)} en ambas direcciones.`
+    : `${medidas}, ${armado(l)} paralelas a L y ${armado(a)} paralelas a B.`;
+}
+
+function Resultados({
+  r,
+  h,
+  qa,
+}: {
+  r: ResultadoZapata;
+  h: number;
+  qa: number;
+}) {
   const { largo: l, ancho: a } = r.direcciones;
   const armado = (x: typeof l) =>
     `${x.armado.cantidad} #${x.armado.varilla} @ ${fmt(x.armado.separacion, 1)} cm`;
@@ -371,9 +453,18 @@ function Resultados({ r, h, qa }: { r: ResultadoZapata; h: number; qa: number })
                 label="Viga ancha (t)"
                 value={`${fmt(r.vigaAncha.actuante)} ≤ ${fmt(r.vigaAncha.resistente)} · ${cumple(r.vigaAncha.cumple)}`}
               />
-              <ResultRow label="Momento último" value={`${fmt(r.momento)} t·m`} />
-              <ResultRow label="Acero requerido" value={`${fmt(r.aceroDiseno)} cm²`} />
-              <ResultRow label="Armado, en ambas direcciones" value={armado(l)} />
+              <ResultRow
+                label="Momento último"
+                value={`${fmt(r.momento)} t·m`}
+              />
+              <ResultRow
+                label="Acero requerido"
+                value={`${fmt(r.aceroDiseno)} cm²`}
+              />
+              <ResultRow
+                label="Armado, en ambas direcciones"
+                value={armado(l)}
+              />
             </>
           ) : (
             <>
