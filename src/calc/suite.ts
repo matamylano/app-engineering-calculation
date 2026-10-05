@@ -1,0 +1,136 @@
+/** Catálogo de la suite: paquetes y los estudios de cada uno. */
+
+export type Availability = "disponible" | "proximamente";
+
+export interface Study {
+  slug: string;
+  title: string;
+  description: string;
+  status: Availability;
+  href?: string;
+  /** Disponible, pero sus fórmulas aún las revisa el ingeniero responsable. */
+  enValidacion?: boolean;
+}
+
+export interface Package {
+  slug: string;
+  title: string;
+  description: string;
+  status: Availability;
+  href?: string;
+  studies: Study[];
+}
+
+export const PACKAGES: Package[] = [
+  {
+    slug: "civil",
+    title: "Ingeniería civil",
+    description: "Estudios de suelos, cálculo estructural, pozos y drenaje, con memoria lista para firma.",
+    status: "disponible",
+    href: "/civil",
+    studies: [
+      {
+        slug: "suelos",
+        title: "Estudio de mecánica de suelos",
+        description: "Clasificación SUCS, capacidad de carga y asentamientos.",
+        status: "disponible",
+        href: "/civil/suelos",
+        enValidacion: true,
+      },
+      {
+        slug: "cargas",
+        title: "Bajada de cargas",
+        description: "Cargas por nivel, carga por columna o muro y tamaño de zapata.",
+        status: "disponible",
+        href: "/civil/cargas",
+        enValidacion: true,
+      },
+      {
+        slug: "zapata",
+        title: "Zapata aislada",
+        description: "Tamaño, peralte y armado con revisión de penetración, cortante y flexión.",
+        status: "disponible",
+        href: "/civil/zapata",
+        enValidacion: true,
+      },
+      {
+        slug: "viga",
+        title: "Viga de concreto",
+        description: "Flexión, cortante y estribos según el tipo de apoyo.",
+        status: "disponible",
+        href: "/civil/viga",
+        enValidacion: true,
+      },
+      {
+        slug: "losa",
+        title: "Losa maciza en una dirección",
+        description: "Acero por metro, temperatura, cortante y espesor mínimo.",
+        status: "disponible",
+        href: "/civil/losa",
+        enValidacion: true,
+      },
+      {
+        slug: "columna",
+        title: "Columna de concreto",
+        description: "Flexocompresión, esbeltez, acero longitudinal y estribos.",
+        status: "disponible",
+        href: "/civil/columna",
+        enValidacion: true,
+      },
+      {
+        slug: "estructuras",
+        title: "Losa en dos direcciones",
+        description: "Losa maciza apoyada en sus cuatro bordes.",
+        status: "proximamente",
+      },
+      {
+        slug: "hidrosanitaria",
+        title: "Instalación hidráulica y sanitaria",
+        description: "Demanda, cisterna, tinaco, diámetros, bomba y drenaje de una casa.",
+        status: "disponible",
+        href: "/civil/hidrosanitaria",
+        enValidacion: true,
+      },
+      {
+        slug: "pozo",
+        title: "Pozo de agua",
+        description: "Prueba de bombeo, abatimiento, ademe, rejilla y bomba sumergible.",
+        status: "disponible",
+        href: "/civil/pozo",
+        enValidacion: true,
+      },
+      {
+        slug: "pluvial",
+        title: "Drenaje pluvial",
+        description: "Gasto de lluvia, diámetro de la tubería y pozos de absorción.",
+        status: "disponible",
+        href: "/civil/pluvial",
+        enValidacion: true,
+      },
+      {
+        slug: "fosa",
+        title: "Fosa séptica",
+        description: "Volumen, medidas y campo de infiltración de una vivienda.",
+        status: "disponible",
+        href: "/civil/fosa",
+        enValidacion: true,
+      },
+    ],
+  },
+  {
+    slug: "paquete-2",
+    title: "Paquete 2",
+    description: "Próximamente.",
+    status: "proximamente",
+    studies: [],
+  },
+  {
+    slug: "paquete-3",
+    title: "Paquete 3",
+    description: "Próximamente.",
+    status: "proximamente",
+    studies: [],
+  },
+];
+
+export const getPackage = (slug: string) => PACKAGES.find((p) => p.slug === slug);

@@ -1,0 +1,41 @@
+import type { Estudio } from "@/lib/servidor/tipos";
+
+/**
+ * Precios en centavos de MXN, IVA incluido.
+ * PROPUESTA: los fija el ingeniero según lo que hoy cobra (ver el plan,
+ * «Decisiones pendientes»). Cambiar aquí cambia lo que cobra Stripe.
+ */
+export interface PaqueteCreditos {
+  id: string;
+  creditos: number;
+  centavos: number;
+}
+
+export const PAQUETES: PaqueteCreditos[] = [
+  { id: "c10", creditos: 10, centavos: 49_000 },
+  { id: "c50", creditos: 50, centavos: 199_000 },
+  { id: "c200", creditos: 200, centavos: 599_000 },
+];
+
+/** Revisión y firma de una memoria por el ingeniero de la suite, por estudio. */
+export const FIRMA_CENTAVOS = {
+  suelos: 250_000,
+  cargas: 150_000,
+  zapata: 150_000,
+  viga: 150_000,
+  losa: 150_000,
+  columna: 150_000,
+  hidrosanitaria: 150_000,
+  pozo: 300_000,
+  pluvial: 150_000,
+  fosa: 150_000,
+} as const satisfies Record<Estudio, number>;
+
+export const FIRMA_SUELOS_CENTAVOS = FIRMA_CENTAVOS.suelos;
+
+export const MONEDA = "mxn";
+
+export const paquete = (id: string) => PAQUETES.find((p) => p.id === id);
+
+export const pesos = (centavos: number) =>
+  (centavos / 100).toLocaleString("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 });
